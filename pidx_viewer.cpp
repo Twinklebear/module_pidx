@@ -264,6 +264,7 @@ int main(int argc, char **argv) {
 
   AppState app;
   Model model;
+  // TODO: Update based on volume
   box3f worldBounds(vec3f(-64), vec3f(64));
   Arcball arcballCamera(worldBounds);
 
