@@ -227,6 +227,7 @@ int main(int argc, char **argv) {
   int provided = 0;
   // TODO: OpenMPI sucks as always and doesn't support pt2pt one-sided
   // communication with thread multiple. This can trigger a hang in OSPRay
+  // if you're not using OpenMPI you can change this to MPI_THREAD_MULTIPLE
   MPI_Init_thread(&argc, &argv, MPI_THREAD_SINGLE, &provided);
 
   std::string datasetPath;
