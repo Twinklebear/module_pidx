@@ -20,9 +20,12 @@
 #include "common/imgui/imgui.h"
 #include "PIDX.h"
 #include "arcball.h"
+#include "util.h"
 
 using namespace ospray::cpp;
 using namespace ospcommon;
+
+using vec3sz = vec_t<size_t, 3>;
 
 #define PIDX_CHECK(F) \
   { \
@@ -69,7 +72,8 @@ struct PIDXVolume {
   PIDX_point pdims;
   int resolution;
   Volume volume;
-  vec3i dimensions;
+  vec3sz fullDims, localDims, localOffset;
+  box3f localRegion;
   vec2f valueRange;
 
   PIDXVolume(const std::string &path) : datasetPath(path), volume("block_bricked_volume") {
@@ -81,16 +85,17 @@ struct PIDXVolume {
     PIDX_close_access(pidxAccess);
   }
   void update() {
+    const int rank = mpicommon::world.rank;
+    const int numRanks = mpicommon::world.size;
+
     PIDX_CHECK(PIDX_file_open(datasetPath.c_str(), PIDX_MODE_RDONLY,
           pidxAccess, pdims, &pidxFile));
-    dimensions = vec3i(pdims[0], pdims[1], pdims[2]);
-    std::cout << "Volume dimensions: " << dimensions << "\n";
+    fullDims = vec3sz(pdims[0], pdims[1], pdims[2]);
 
     PIDX_CHECK(PIDX_set_current_time_step(pidxFile, 0));
 
     int variableCount = 0;
     PIDX_CHECK(PIDX_get_variable_count(pidxFile, &variableCount));
-    std::cout << "Variable count = " << variableCount << "\n";
 
     PIDX_CHECK(PIDX_set_current_variable_index(pidxFile, 0));
     PIDX_variable variable;
@@ -100,33 +105,70 @@ struct PIDXVolume {
     int bitsPerSample = 0;
     PIDX_CHECK(PIDX_values_per_datatype(variable->type_name, &valuesPerSample,
           &bitsPerSample));
-    std::cout << "Variable type name: " << variable->type_name << "\n"
-      << "Values per sample: " << valuesPerSample << "\n"
-      << "Bits per sample: " << bitsPerSample << "\n";
     const int bytesPerSample = bitsPerSample / 8;
 
-    std::vector<char> data(bytesPerSample * valuesPerSample * dimensions.x
-        * dimensions.y * dimensions.z, 0);
-    PIDX_point localOffset = {0};
-    //PIDX_point localDims = pdims;
-    PIDX_CHECK(PIDX_variable_read_data_layout(variable, localOffset, pdims,
+    if (rank == 0) {
+      std::cout << "Volume dimensions: " << fullDims << "\n"
+        << "Variable count = " << variableCount << "\n"
+        << "Variable type name: " << variable->type_name << "\n"
+        << "Values per sample: " << valuesPerSample << "\n"
+        << "Bits per sample: " << bitsPerSample << std::endl;
+    }
+
+    const vec3sz grid = vec3sz(computeGrid(numRanks));
+    const vec3sz brickDims = vec3sz(fullDims) / grid;
+    const vec3sz brickId(rank % grid.x, (rank / grid.x) % grid.y, rank / (grid.x * grid.y));
+    const vec3f gridOrigin = vec3f(brickId) * vec3f(brickDims);
+
+    const std::array<int, 3> ghosts = computeGhostFaces(vec3i(brickId), vec3i(grid));
+    vec3sz ghostDims(0);
+    for (size_t i = 0; i < 3; ++i) {
+      if (ghosts[i] & POS_FACE) {
+        ghostDims[i] += 1;
+      }
+      if (ghosts[i] & NEG_FACE) {
+        ghostDims[i] += 1;
+      }
+    }
+    localDims = brickDims + ghostDims;
+    const vec3sz ghostOffset(ghosts[0] & NEG_FACE ? 1 : 0,
+                               ghosts[1] & NEG_FACE ? 1 : 0,
+                               ghosts[2] & NEG_FACE ? 1 : 0);
+
+    localOffset = brickId * brickDims - ghostOffset;
+    PIDX_point pLocalOffset, pLocalDims;
+    PIDX_set_point(pLocalOffset, localOffset.x, localOffset.y, localOffset.z);
+    PIDX_set_point(pLocalDims, localDims.x, localDims.y, localDims.z);
+
+    const size_t nLocalVals = localDims.x * localDims.y * localDims.z;
+    std::vector<char> data(bytesPerSample * valuesPerSample * nLocalVals, 0);
+    PIDX_CHECK(PIDX_variable_read_data_layout(variable, pLocalOffset, pLocalDims,
           data.data(), PIDX_row_major));
     PIDX_CHECK(PIDX_close(pidxFile));
 
     auto minmax = std::minmax_element(reinterpret_cast<float*>(data.data()),
-        reinterpret_cast<float*>(data.data()) + dimensions.x * dimensions.y * dimensions.z);
-    std::cout << "Value range = [" << *minmax.first << ", " << *minmax.second << "]\n";
-    valueRange = vec2f(*minmax.first, *minmax.second);
-    
+        reinterpret_cast<float*>(data.data()) + nLocalVals);
+    // TODO: Need MPI Allreduce here
+    vec2f localValueRange = vec2f(*minmax.first, *minmax.second);
+    MPI_Allreduce(&localValueRange.x, &valueRange.x, 1, MPI_FLOAT,
+        MPI_MIN, MPI_COMM_WORLD);
+    MPI_Allreduce(&localValueRange.y, &valueRange.y, 1, MPI_FLOAT,
+        MPI_MAX, MPI_COMM_WORLD);
+    std::cout << "Value range = [" << valueRange.x
+      << ", " << valueRange.y << "]\n";
+
     // TODO: Parse the IDX type name into the OSPRay type name
     volume.set("voxelType", "float");
     // TODO: This will be the local dimensions later
-    volume.set("dimensions", dimensions);
-    volume.set("gridOrigin", -vec3f(dimensions) / 2.f);
+    volume.set("dimensions", vec3i(localDims));
+    volume.set("gridOrigin", vec3f(localOffset) - vec3f(fullDims) / 2.f);
     // TODO: Use the logic box to figure out grid spacing
     //volume.set("gridSpacing", vec3f(dimensions) / vec3f(ospDims));
+
     // Now we have some row-major data in the array we can pass to an OSPRay volume
-    volume.setRegion(data.data(), vec3i(0), dimensions);
+    volume.setRegion(data.data(), vec3i(0), vec3i(localDims));
+    localRegion = box3f(vec3f(brickId * brickDims) - vec3f(fullDims) / 2.f,
+        vec3f(brickId * brickDims + brickDims) - vec3f(fullDims) / 2.f);
   }
 };
 
@@ -183,10 +225,9 @@ void charCallback(GLFWwindow *window, unsigned int c) {
 
 int main(int argc, char **argv) {
   int provided = 0;
-  MPI_Init_thread(&argc, &argv, MPI_THREAD_MULTIPLE, &provided);
-  if (provided != MPI_THREAD_MULTIPLE) {
-    throw std::runtime_error("MPI thread multiple is required");
-  }
+  // TODO: OpenMPI sucks as always and doesn't support pt2pt one-sided
+  // communication with thread multiple. This can trigger a hang in OSPRay
+  MPI_Init_thread(&argc, &argv, MPI_THREAD_SINGLE, &provided);
 
   std::string datasetPath;
   for (int i = 1; i < argc; ++i) {
@@ -242,9 +283,9 @@ int main(int argc, char **argv) {
   Arcball arcballCamera(worldBounds);
 
   // TODO: Set up the regions
-  //std::vector<box3f> regions{volume.bounds};
-  //ospray::cpp::Data regionData(regions.size() * 2, OSP_FLOAT3, regions.data());
-  //model.set("regions", regionData);
+  std::vector<box3f> regions{pidxVolume.localRegion};
+  ospray::cpp::Data regionData(regions.size() * 2, OSP_FLOAT3, regions.data());
+  model.set("regions", regionData);
   model.addVolume(pidxVolume.volume);
   model.commit();
 
@@ -276,7 +317,7 @@ int main(int argc, char **argv) {
       return 1;
     }
     window = glfwCreateWindow(app.fbSize.x, app.fbSize.y,
-        "Sample Distributed OSPRay Viewer", nullptr, nullptr);
+        "PIDX OSPRay Viewer", nullptr, nullptr);
     if (!window) {
       glfwTerminate();
       return 1;

@@ -19,6 +19,7 @@ if (OSPRAY_MODULE_PIDX)
   ospray_create_application(pidx_viewer
     pidx_viewer.cpp
     arcball.cpp
+    util.cpp
   LINK
     ${OPENGL_LIBRARIES}
     ${GLFW_LIBRARY}
