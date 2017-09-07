@@ -18,6 +18,7 @@ if (OSPRAY_MODULE_PIDX)
 
   ospray_create_application(pidx_viewer
     pidx_viewer.cpp
+    pidx_volume.cpp
     arcball.cpp
     util.cpp
   LINK

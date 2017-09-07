@@ -2,6 +2,7 @@
 
 #include <array>
 #include "ospcommon/vec.h"
+#include "PIDX.h"
 
 using vec3sz = ospcommon::vec_t<size_t, 3>;
 

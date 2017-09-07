@@ -1,0 +1,103 @@
+#include <mpiCommon/MPICommon.h>
+#include <mpi.h>
+#include "pidx_volume.h"
+
+using namespace ospray::cpp;
+using namespace ospcommon;
+
+PIDXVolume::PIDXVolume(const std::string &path) : datasetPath(path), volume("block_bricked_volume") {
+  PIDX_CHECK(PIDX_create_access(&pidxAccess));
+  PIDX_CHECK(PIDX_set_mpi_access(pidxAccess, MPI_COMM_WORLD));
+  update();
+}
+PIDXVolume::~PIDXVolume() {
+  PIDX_close_access(pidxAccess);
+}
+void PIDXVolume::update() {
+  const int rank = mpicommon::world.rank;
+  const int numRanks = mpicommon::world.size;
+
+  PIDX_CHECK(PIDX_file_open(datasetPath.c_str(), PIDX_MODE_RDONLY,
+        pidxAccess, pdims, &pidxFile));
+  fullDims = vec3sz(pdims[0], pdims[1], pdims[2]);
+
+  PIDX_CHECK(PIDX_set_current_time_step(pidxFile, 229829));
+
+  int variableCount = 0;
+  PIDX_CHECK(PIDX_get_variable_count(pidxFile, &variableCount));
+
+  PIDX_CHECK(PIDX_set_current_variable_index(pidxFile, 49));
+  PIDX_variable variable;
+  PIDX_CHECK(PIDX_get_current_variable(pidxFile, &variable));
+
+  int valuesPerSample = 0;
+  int bitsPerSample = 0;
+  PIDX_CHECK(PIDX_values_per_datatype(variable->type_name, &valuesPerSample,
+        &bitsPerSample));
+  const int bytesPerSample = bitsPerSample / 8;
+
+  if (rank == 0) {
+    std::cout << "Volume dimensions: " << fullDims << "\n"
+      << "Variable count = " << variableCount << "\n"
+      << "Variable type name: " << variable->type_name << "\n"
+      << "Values per sample: " << valuesPerSample << "\n"
+      << "Bits per sample: " << bitsPerSample << std::endl;
+  }
+
+  const vec3sz grid = vec3sz(computeGrid(numRanks));
+  const vec3sz brickDims = vec3sz(fullDims) / grid;
+  const vec3sz brickId(rank % grid.x, (rank / grid.x) % grid.y, rank / (grid.x * grid.y));
+  const vec3f gridOrigin = vec3f(brickId) * vec3f(brickDims);
+
+  const std::array<int, 3> ghosts = computeGhostFaces(vec3i(brickId), vec3i(grid));
+  vec3sz ghostDims(0);
+  for (size_t i = 0; i < 3; ++i) {
+    if (ghosts[i] & POS_FACE) {
+      ghostDims[i] += 1;
+    }
+    if (ghosts[i] & NEG_FACE) {
+      ghostDims[i] += 1;
+    }
+  }
+  localDims = brickDims + ghostDims;
+  const vec3sz ghostOffset(ghosts[0] & NEG_FACE ? 1 : 0,
+      ghosts[1] & NEG_FACE ? 1 : 0,
+      ghosts[2] & NEG_FACE ? 1 : 0);
+
+  localOffset = brickId * brickDims - ghostOffset;
+  PIDX_point pLocalOffset, pLocalDims;
+  PIDX_set_point(pLocalOffset, localOffset.x, localOffset.y, localOffset.z);
+  PIDX_set_point(pLocalDims, localDims.x, localDims.y, localDims.z);
+
+  const size_t nLocalVals = localDims.x * localDims.y * localDims.z;
+  std::vector<char> data(bytesPerSample * valuesPerSample * nLocalVals, 0);
+  PIDX_CHECK(PIDX_variable_read_data_layout(variable, pLocalOffset, pLocalDims,
+        data.data(), PIDX_row_major));
+  PIDX_CHECK(PIDX_close(pidxFile));
+
+  auto minmax = std::minmax_element(reinterpret_cast<float*>(data.data()),
+      reinterpret_cast<float*>(data.data()) + nLocalVals);
+  // TODO: Need MPI Allreduce here
+  vec2f localValueRange = vec2f(*minmax.first, *minmax.second);
+  MPI_Allreduce(&localValueRange.x, &valueRange.x, 1, MPI_FLOAT,
+      MPI_MIN, MPI_COMM_WORLD);
+  MPI_Allreduce(&localValueRange.y, &valueRange.y, 1, MPI_FLOAT,
+      MPI_MAX, MPI_COMM_WORLD);
+  if (rank == 0) {
+    std::cout << "Value range = " << valueRange << "\n";
+  }
+
+  // TODO: Parse the IDX type name into the OSPRay type name
+  volume.set("voxelType", "float");
+  // TODO: This will be the local dimensions later
+  volume.set("dimensions", vec3i(localDims));
+  volume.set("gridOrigin", vec3f(localOffset) - vec3f(fullDims) / 2.f);
+  // TODO: Use the logic box to figure out grid spacing
+  //volume.set("gridSpacing", vec3f(dimensions) / vec3f(ospDims));
+
+  // Now we have some row-major data in the array we can pass to an OSPRay volume
+  volume.setRegion(data.data(), vec3i(0), vec3i(localDims));
+  localRegion = box3f(vec3f(brickId * brickDims) - vec3f(fullDims) / 2.f,
+      vec3f(brickId * brickDims + brickDims) - vec3f(fullDims) / 2.f);
+}
+
