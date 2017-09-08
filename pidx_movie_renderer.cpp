@@ -1,4 +1,5 @@
 #include <random>
+#include <cmath>
 #include <algorithm>
 #include <array>
 #include <chrono>
@@ -27,7 +28,7 @@ int main(int argc, char **argv) {
   // if you're not using OpenMPI you can change this to MPI_THREAD_MULTIPLE
   MPI_Init_thread(&argc, &argv, MPI_THREAD_SINGLE, &provided);
 
-  vec2i fbSize(1920, 1080);
+  vec2i fbSize(1080, 1920);
   std::string datasetPath;
   std::string outputPrefix = "frame";
   for (int i = 1; i < argc; ++i) {
@@ -76,7 +77,7 @@ int main(int argc, char **argv) {
 
   Model model;
   PIDXVolume pidxVolume(datasetPath, tfcn);
-  //pidxVolume.volume.set("samplingRate", 2.0);
+  pidxVolume.volume.set("samplingRate", 0.5);
   pidxVolume.volume.commit();
   // TODO: Update based on volume
   box3f worldBounds(vec3f(-64), vec3f(64));
@@ -88,9 +89,10 @@ int main(int argc, char **argv) {
   model.commit();
 
   Camera camera("perspective");
-  camera.set("pos", vec3f(0, 0, -1100));
-  camera.set("dir", vec3f(0, 0, 1));
-  camera.set("up", vec3f(0, 1, 0));
+  vec3f cameraPos(0, 0, -1600);
+  camera.set("pos", cameraPos);
+  camera.set("dir", -cameraPos);
+  camera.set("up", vec3f(-1, 0, 0));
   camera.set("aspect", static_cast<float>(fbSize.x) / fbSize.y);
   camera.commit();
 
@@ -107,17 +109,32 @@ int main(int argc, char **argv) {
   mpicommon::world.barrier();
 
   float avgFrameTime = 0;
-  size_t nframes = 25;
+  size_t nframes = 100;
+  size_t spp = 8;
+  float radiansPerSecond = 1;
   for (size_t i = 0; i < nframes; ++i) {
     using namespace std::chrono;
+
+    float time = i / 24.0;
+    cameraPos.y = 1600 * std::sin(time * radiansPerSecond);
+    cameraPos.z = -1600 * std::cos(time * radiansPerSecond);
+    camera.set("pos", cameraPos);
+    camera.set("dir", -cameraPos);
+    camera.commit();
+    fb.clear(OSP_FB_COLOR | OSP_FB_ACCUM);
+
     auto startFrame = high_resolution_clock::now();
-
-    renderer.renderFrame(fb, OSP_FB_COLOR);
-
+    // We use progressive refinment for multiple samples per-pixel,
+    // seems like a bug with using spp > 1 in the distrib raycast renderer
+    // where we start seeing block boundary artifacts. TODO: investigate
+    for (size_t s = 0; s < spp; ++s) {
+      renderer.renderFrame(fb, OSP_FB_COLOR);
+    }
     auto endFrame = high_resolution_clock::now();
+
     float frameTime = duration_cast<milliseconds>(endFrame - startFrame).count() / 1000.f;
     if (rank == 0) {
-      std::cout << "Frame took " << frameTime << "ms\n";
+      std::cout << "Frame took " << frameTime << "s\n";
     }
     avgFrameTime += frameTime;
 
@@ -131,7 +148,7 @@ int main(int argc, char **argv) {
     }
   }
   if (rank == 0) {
-    std::cout << "Avg. frame time: " << avgFrameTime / nframes << "ms\n";
+    std::cout << "Avg. frame time: " << avgFrameTime / nframes << "s\n";
   }
 
   MPI_Finalize();
