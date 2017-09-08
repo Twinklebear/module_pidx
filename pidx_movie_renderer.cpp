@@ -13,7 +13,6 @@
 #include "ospray/ospray_cpp/TransferFunction.h"
 #include "ospray/ospray_cpp/Volume.h"
 #include "ospray/ospray_cpp/Model.h"
-#include "ospcommon/networking/Socket.h"
 #include "util.h"
 #include "image_util.h"
 #include "pidx_volume.h"
@@ -23,23 +22,25 @@ using namespace ospray::cpp;
 
 int main(int argc, char **argv) {
   int provided = 0;
-  int port = -1;
   // TODO: OpenMPI sucks as always and doesn't support pt2pt one-sided
   // communication with thread multiple. This can trigger a hang in OSPRay
   // if you're not using OpenMPI you can change this to MPI_THREAD_MULTIPLE
   MPI_Init_thread(&argc, &argv, MPI_THREAD_SINGLE, &provided);
 
+  vec2i fbSize(1920, 1080);
   std::string datasetPath;
+  std::string outputPrefix = "frame";
   for (int i = 1; i < argc; ++i) {
     if (std::strcmp("-dataset", argv[i]) == 0) {
       datasetPath = argv[++i];
-    } else if (std::strcmp("-port", argv[i]) == 0) {
-      port = std::atoi(argv[++i]);
+    } else if (std::strcmp("-o", argv[i]) == 0) {
+      outputPrefix = argv[++i];
     }
   }
+
   if (datasetPath.empty()) {
-    throw std::runtime_error("Usage: mpirun -np <N> ./pidx_render_worker"
-        " -dataset <dataset.idx> -port <port>");
+    throw std::runtime_error("Usage: mpirun -np <N> ./pidx_movie_renderer"
+        " -dataset <dataset.idx>");
   }
 
   ospLoadModule("mpi");
@@ -73,10 +74,10 @@ int main(int argc, char **argv) {
     tfcn.set("opacities", opacityData);
   }
 
-  AppState app;
-
   Model model;
   PIDXVolume pidxVolume(datasetPath, tfcn);
+  //pidxVolume.volume.set("samplingRate", 2.0);
+  pidxVolume.volume.commit();
   // TODO: Update based on volume
   box3f worldBounds(vec3f(-64), vec3f(64));
 
@@ -87,10 +88,10 @@ int main(int argc, char **argv) {
   model.commit();
 
   Camera camera("perspective");
-  camera.set("pos", vec3f(0, 0, -500));
+  camera.set("pos", vec3f(0, 0, -1100));
   camera.set("dir", vec3f(0, 0, 1));
   camera.set("up", vec3f(0, 1, 0));
-  camera.set("aspect", static_cast<float>(app.fbSize.x) / app.fbSize.y);
+  camera.set("aspect", static_cast<float>(fbSize.x) / fbSize.y);
   camera.commit();
 
   Renderer renderer("mpi_raycast");
@@ -100,86 +101,41 @@ int main(int argc, char **argv) {
   renderer.commit();
   assert(renderer);
 
-  FrameBuffer fb(app.fbSize, OSP_FB_SRGBA, OSP_FB_COLOR | OSP_FB_ACCUM | OSP_FB_VARIANCE);
-  fb.clear(OSP_FB_COLOR | OSP_FB_ACCUM | OSP_FB_VARIANCE);
-
-  socket_t listenSocket = nullptr;
-  socket_t client = nullptr;
-  if (rank == 0) {
-    listenSocket = bind(port);
-    std::cout << "Rank 0 now listening for client" << std::endl;
-    client = listen(listenSocket);
-  }
+  FrameBuffer fb(fbSize, OSP_FB_SRGBA, OSP_FB_COLOR | OSP_FB_ACCUM);
+  fb.clear(OSP_FB_COLOR | OSP_FB_ACCUM);
 
   mpicommon::world.barrier();
 
-  std::vector<vec3f> tfcnColors;
-  std::vector<float> tfcnAlphas;
-  while (!app.quit) {
-    if (app.cameraChanged) {
-      camera.set("pos", app.v[0]);
-      camera.set("dir", app.v[1]);
-      camera.set("up", app.v[2]);
-      camera.commit();
+  float avgFrameTime = 0;
+  size_t nframes = 25;
+  for (size_t i = 0; i < nframes; ++i) {
+    using namespace std::chrono;
+    auto startFrame = high_resolution_clock::now();
 
-      fb.clear(OSP_FB_COLOR | OSP_FB_ACCUM | OSP_FB_VARIANCE);
-      app.cameraChanged = false;
-    }
     renderer.renderFrame(fb, OSP_FB_COLOR);
+
+    auto endFrame = high_resolution_clock::now();
+    float frameTime = duration_cast<milliseconds>(endFrame - startFrame).count() / 1000.f;
+    if (rank == 0) {
+      std::cout << "Frame took " << frameTime << "ms\n";
+    }
+    avgFrameTime += frameTime;
 
     if (rank == 0) {
       uint32_t *img = (uint32_t*)fb.map(OSP_FB_COLOR);
-      // TODO: compress it
-      ospcommon::write(client, img, app.fbSize.x * app.fbSize.y * sizeof(uint32_t));
-      ospcommon::flush(client);
+      char frameStr[16] = {0};
+      std::snprintf(frameStr, 15, "%08lu", i);
+      save_jpeg_file(outputPrefix + "-" + std::string(frameStr) + ".jpg",
+          img, fbSize.x, fbSize.y);
       fb.unmap(img);
-
-      ospcommon::read(client, &app, sizeof(AppState));
     }
-    // Send out the shared app state that the workers need to know, e.g. camera
-    // position, if we should be quitting.
-    MPI_Bcast(&app, sizeof(AppState), MPI_BYTE, 0, MPI_COMM_WORLD);
-
-    if (app.fbSizeChanged) {
-      fb = FrameBuffer(app.fbSize, OSP_FB_SRGBA, OSP_FB_COLOR | OSP_FB_ACCUM);
-      fb.clear(OSP_FB_COLOR | OSP_FB_ACCUM | OSP_FB_VARIANCE);
-      camera.set("aspect", static_cast<float>(app.fbSize.x) / app.fbSize.y);
-      camera.commit();
-
-      app.fbSizeChanged = false;
-    }
-    if (app.tfcnChanged) {
-      size_t sz = tfcnColors.size();
-      MPI_Bcast(&sz, sizeof(size_t), MPI_BYTE, 0, MPI_COMM_WORLD);
-      if (rank != 0) {
-        tfcnColors.resize(sz);
-      }
-      MPI_Bcast(tfcnColors.data(), sizeof(vec3f) * tfcnColors.size(), MPI_BYTE,
-                0, MPI_COMM_WORLD);
-
-      sz = tfcnAlphas.size();
-      MPI_Bcast(&sz, sizeof(size_t), MPI_BYTE, 0, MPI_COMM_WORLD);
-      if (rank != 0) {
-        tfcnAlphas.resize(sz);
-      }
-      MPI_Bcast(tfcnAlphas.data(), sizeof(float) * tfcnAlphas.size(), MPI_BYTE,
-                0, MPI_COMM_WORLD);
-
-      Data colorData(tfcnColors.size(), OSP_FLOAT3, tfcnColors.data());
-      Data alphaData(tfcnAlphas.size(), OSP_FLOAT, tfcnAlphas.data());
-      colorData.commit();
-      alphaData.commit();
-
-      tfcn.set("colors", colorData);
-      tfcn.set("opacities", alphaData);
-      tfcn.commit();
-
-      fb.clear(OSP_FB_COLOR | OSP_FB_ACCUM | OSP_FB_VARIANCE);
-      app.tfcnChanged = false;
-    }
+  }
+  if (rank == 0) {
+    std::cout << "Avg. frame time: " << avgFrameTime / nframes << "ms\n";
   }
 
   MPI_Finalize();
   return 0;
 }
+
 

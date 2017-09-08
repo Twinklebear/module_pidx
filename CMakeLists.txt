@@ -56,6 +56,18 @@ if (OSPRAY_MODULE_PIDX)
     ${TURBOJPEG_LIBRARY}
   )
  
+  ospray_create_application(pidx_movie_renderer
+    pidx_movie_renderer.cpp
+  LINK
+    pidx_app_util
+    ospray
+    ospray_common
+    ospray_mpi_common
+    ospray
+    ${PIDX_LIBRARIES}
+    ${MPI_CXX_LIBRARIES}
+    ${TURBOJPEG_LIBRARY}
+  )
 
   ospray_create_application(pidx_render_worker
     pidx_render_worker.cpp
