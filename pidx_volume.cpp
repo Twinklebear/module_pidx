@@ -11,7 +11,7 @@ PIDXVolume::PIDXVolume(const std::string &path, TransferFunction tfcn)
 {
   PIDX_CHECK(PIDX_create_access(&pidxAccess));
   PIDX_CHECK(PIDX_set_mpi_access(pidxAccess, MPI_COMM_WORLD));
-  currentVariable = 49;
+  currentVariable = 50;
   update();
 }
 PIDXVolume::~PIDXVolume() {
@@ -128,20 +128,5 @@ void PIDXVolume::update() {
 
   localRegion = box3f(vec3f(brickId * brickDims) - vec3f(fullDims) / 2.f,
       vec3f(brickId * brickDims + brickDims) - vec3f(fullDims) / 2.f);
-}
-bool PIDXVolume::drawUi() {
-  bool updated = false;
-  if (ImGui::Begin("PIDX Info")) {
-    updated = ImGui::ListBox("Vars", &currentVariable,
-        [](void *data, int i, const char **out){
-          PIDXVolume *pv = static_cast<PIDXVolume*>(data);
-          *out = pv->pidxVars[i].c_str();
-          return true;
-        },
-        this, pidxVars.size());
-  }
-  ImGui::End();
-
-  return updated;
 }
 

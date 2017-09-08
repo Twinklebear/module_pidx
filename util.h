@@ -6,6 +6,16 @@
 
 using vec3sz = ospcommon::vec_t<size_t, 3>;
 
+// Struct for bcasting out the camera change info and general app state
+struct AppState {
+  // eye pos, look dir, up dir
+  std::array<ospcommon::vec3f, 3> v;
+  ospcommon::vec2i fbSize;
+  bool cameraChanged, quit, fbSizeChanged, tfcnChanged;
+
+  AppState();
+};
+
 // Some of these utils for computing the gridding and ghost region
 // are from the gensv library in the OSPRay's mpi module
 enum GhostFace {

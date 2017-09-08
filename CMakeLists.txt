@@ -41,25 +41,48 @@ if (OSPRAY_MODULE_PIDX)
   include_directories(${CMAKE_SOURCE_DIR}/apps/common
     ${CMAKE_SOURCE_DIR}/apps/exampleViewer)
 
-  ospray_create_application(pidx_viewer
-    pidx_viewer.cpp
+  add_library(pidx_app_util
     pidx_volume.cpp
-    arcball.cpp
     util.cpp
     image_util.cpp
+  )
+  target_link_libraries(pidx_app_util PUBLIC
+    ospray
+    ospray_common
+    ospray_mpi_common
+    ospray
+    ${PIDX_LIBRARIES}
+    ${MPI_CXX_LIBRARIES}
+    ${TURBOJPEG_LIBRARY}
+  )
+ 
+
+  ospray_create_application(pidx_render_worker
+    pidx_render_worker.cpp
   LINK
+    pidx_app_util
+    ospray
+    ospray_common
+    ospray_mpi_common
+    ospray
+    ${PIDX_LIBRARIES}
+    ${MPI_CXX_LIBRARIES}
+    ${TURBOJPEG_LIBRARY}
+  )
+
+  ospray_create_application(pidx_viewer
+    pidx_viewer.cpp
+    arcball.cpp
+  LINK
+    pidx_app_util
     ${OPENGL_LIBRARIES}
     ${GLFW_LIBRARY}
     gl3w
     imgui
     ospray
     ospray_common
-    ospray_mpi_common
     ospray_imgui3d_sg
     ospray_sg
-    ospray
-    ${PIDX_LIBRARIES}
-    ${MPI_CXX_LIBRARIES}
     ${TURBOJPEG_LIBRARY}
   )
 endif()

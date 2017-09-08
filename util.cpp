@@ -5,6 +5,10 @@
 
 using namespace ospcommon;
 
+AppState::AppState() : fbSize(1024), cameraChanged(false), quit(false),
+  fbSizeChanged(false), tfcnChanged(false)
+{}
+
 bool computeDivisor(int x, int &divisor) {
   int upperBound = std::sqrt(x);
   for (int i = 2; i <= upperBound; ++i) {

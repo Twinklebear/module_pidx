@@ -27,6 +27,5 @@ struct PIDXVolume {
   PIDXVolume(const std::string &path, ospray::cpp::TransferFunction tfcn);
   ~PIDXVolume();
   void update();
-  bool drawUi();
 };
 
