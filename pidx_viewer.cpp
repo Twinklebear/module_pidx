@@ -20,6 +20,7 @@
 #include "common/imgui/imgui.h"
 #include "arcball.h"
 #include "util.h"
+#include "image_util.h"
 #include "pidx_volume.h"
 
 using namespace ospray::cpp;
@@ -30,7 +31,7 @@ struct AppState {
   // eye pos, look dir, up dir
   std::array<vec3f, 3> v;
   vec2i fbSize;
-  bool cameraChanged, quit, fbSizeChanged, tfcnChanged;
+  bool cameraChanged, quit, fbSizeChanged, tfcnChanged, volumeChanged;
 
   AppState() : fbSize(1024), cameraChanged(false), quit(false),
     fbSizeChanged(false)
@@ -150,15 +151,10 @@ int main(int argc, char **argv) {
     tfcn.set("opacities", opacityData);
   }
 
-  PIDXVolume pidxVolume(datasetPath);
-  tfcn.set("valueRange", vec2f(pidxVolume.valueRange.x, pidxVolume.valueRange.y));
-  tfcn.commit();
-
-  pidxVolume.volume.set("transferFunction", tfcn);
-  pidxVolume.volume.commit();
 
   AppState app;
   Model model;
+  PIDXVolume pidxVolume(datasetPath, tfcn);
   // TODO: Update based on volume
   box3f worldBounds(vec3f(-64), vec3f(64));
   Arcball arcballCamera(worldBounds);
@@ -244,7 +240,10 @@ int main(int argc, char **argv) {
       const auto tfcnTimeStamp = transferFcn->childrenLastModified();
 
       ImGui_ImplGlfwGL3_NewFrame();
+
       tfnWidget->drawUi();
+      app.volumeChanged = pidxVolume.drawUi();
+
       ImGui::Render();
 
       glfwSwapBuffers(window);
@@ -320,6 +319,11 @@ int main(int argc, char **argv) {
 
       fb.clear(OSP_FB_COLOR | OSP_FB_ACCUM | OSP_FB_VARIANCE);
       app.tfcnChanged = false;
+    }
+    if (app.volumeChanged) {
+      pidxVolume.update();
+      fb.clear(OSP_FB_COLOR | OSP_FB_ACCUM | OSP_FB_VARIANCE);
+      app.volumeChanged = false;
     }
   }
   if (rank == 0) {

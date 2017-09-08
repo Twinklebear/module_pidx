@@ -1,13 +1,17 @@
 #include <mpiCommon/MPICommon.h>
 #include <mpi.h>
+#include "common/imgui/imgui.h"
 #include "pidx_volume.h"
 
 using namespace ospray::cpp;
 using namespace ospcommon;
 
-PIDXVolume::PIDXVolume(const std::string &path) : datasetPath(path), volume("block_bricked_volume") {
+PIDXVolume::PIDXVolume(const std::string &path, TransferFunction tfcn)
+  : datasetPath(path), volume("block_bricked_volume"), transferFunction(tfcn)
+{
   PIDX_CHECK(PIDX_create_access(&pidxAccess));
   PIDX_CHECK(PIDX_set_mpi_access(pidxAccess, MPI_COMM_WORLD));
+  currentVariable = 49;
   update();
 }
 PIDXVolume::~PIDXVolume() {
@@ -23,10 +27,24 @@ void PIDXVolume::update() {
 
   PIDX_CHECK(PIDX_set_current_time_step(pidxFile, 229829));
 
-  int variableCount = 0;
-  PIDX_CHECK(PIDX_get_variable_count(pidxFile, &variableCount));
+  if (pidxVars.empty()) {
+    int variableCount = 0;
+    PIDX_CHECK(PIDX_get_variable_count(pidxFile, &variableCount));
+    if (rank == 0) {
+      std::cout << "Variable count = " << variableCount << "\n";
+    }
 
-  PIDX_CHECK(PIDX_set_current_variable_index(pidxFile, 49));
+    for (int i = 0; i < variableCount; ++i) {
+      PIDX_CHECK(PIDX_set_current_variable_index(pidxFile, i));
+      PIDX_variable variable;
+      PIDX_CHECK(PIDX_get_current_variable(pidxFile, &variable));
+      pidxVars.push_back(variable->var_name);
+    }
+  }
+
+  MPI_Bcast(&currentVariable, 1, MPI_INT, 0, MPI_COMM_WORLD);
+
+  PIDX_CHECK(PIDX_set_current_variable_index(pidxFile, currentVariable));
   PIDX_variable variable;
   PIDX_CHECK(PIDX_get_current_variable(pidxFile, &variable));
 
@@ -38,7 +56,6 @@ void PIDXVolume::update() {
 
   if (rank == 0) {
     std::cout << "Volume dimensions: " << fullDims << "\n"
-      << "Variable count = " << variableCount << "\n"
       << "Variable type name: " << variable->type_name << "\n"
       << "Values per sample: " << valuesPerSample << "\n"
       << "Bits per sample: " << bitsPerSample << std::endl;
@@ -73,7 +90,13 @@ void PIDXVolume::update() {
   std::vector<char> data(bytesPerSample * valuesPerSample * nLocalVals, 0);
   PIDX_CHECK(PIDX_variable_read_data_layout(variable, pLocalOffset, pLocalDims,
         data.data(), PIDX_row_major));
+
+  using namespace std::chrono;
+  auto startLoad = high_resolution_clock::now();
   PIDX_CHECK(PIDX_close(pidxFile));
+  auto endLoad = high_resolution_clock::now();
+  std::cout << "Rank " << rank << " load time: "
+    << duration_cast<milliseconds>(endLoad - startLoad).count() << "\n";
 
   auto minmax = std::minmax_element(reinterpret_cast<float*>(data.data()),
       reinterpret_cast<float*>(data.data()) + nLocalVals);
@@ -86,7 +109,11 @@ void PIDXVolume::update() {
   if (rank == 0) {
     std::cout << "Value range = " << valueRange << "\n";
   }
+  valueRange = vec2f(0.0, 0.15);
+  transferFunction.set("valueRange", valueRange);
+  transferFunction.commit();
 
+  volume.set("transferFunction", transferFunction);
   // TODO: Parse the IDX type name into the OSPRay type name
   volume.set("voxelType", "float");
   // TODO: This will be the local dimensions later
@@ -97,7 +124,24 @@ void PIDXVolume::update() {
 
   // Now we have some row-major data in the array we can pass to an OSPRay volume
   volume.setRegion(data.data(), vec3i(0), vec3i(localDims));
+  volume.commit();
+
   localRegion = box3f(vec3f(brickId * brickDims) - vec3f(fullDims) / 2.f,
       vec3f(brickId * brickDims + brickDims) - vec3f(fullDims) / 2.f);
+}
+bool PIDXVolume::drawUi() {
+  bool updated = false;
+  if (ImGui::Begin("PIDX Info")) {
+    updated = ImGui::ListBox("Vars", &currentVariable,
+        [](void *data, int i, const char **out){
+          PIDXVolume *pv = static_cast<PIDXVolume*>(data);
+          *out = pv->pidxVars[i].c_str();
+          return true;
+        },
+        this, pidxVars.size());
+  }
+  ImGui::End();
+
+  return updated;
 }
 
