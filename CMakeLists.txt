@@ -6,9 +6,34 @@ set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 find_package(PIDX REQUIRED)
 find_package(MPI REQUIRED)
+
+# find libjpeg-turbo
+FIND_PATH(TURBOJPEG_INCLUDE_DIR
+  NAMES turbojpeg.h
+  PATHS
+  $ENV{LIBJPEG_TURBO_DIR}/include
+  $ENV{TURBOJPEG_DIR}/include
+  #linux
+  /opt/libjpeg-turbo/include
+  #mac
+  /usr/local/opt/jpeg-turbo/include
+)
+
+FIND_LIBRARY(TURBOJPEG_LIBRARY
+  NAMES turbojpeg
+  PATHS 
+  $ENV{LIBJPEG_TURBO_DIR}/lib
+  $ENV{TURBOJPEG_DIR}/lib
+  #linux
+  /opt/libjpeg-turbo/lib
+  #mac
+  /usr/local/opt/jpeg-turbo/lib
+)
+
 include_directories(${GLFW_INCLUDE_DIR}
   ${MPI_CXX_INCLUDE_PATH}
-  ${PIDX_INCLUDE_DIRS})
+  ${PIDX_INCLUDE_DIRS}
+  ${TURBOJPEG_INCLUDE_DIR})
 
 option(OSPRAY_MODULE_PIDX "PIDX module" ON)
 
@@ -21,6 +46,7 @@ if (OSPRAY_MODULE_PIDX)
     pidx_volume.cpp
     arcball.cpp
     util.cpp
+    image_util.cpp
   LINK
     ${OPENGL_LIBRARIES}
     ${GLFW_LIBRARY}
@@ -34,6 +60,7 @@ if (OSPRAY_MODULE_PIDX)
     ospray
     ${PIDX_LIBRARIES}
     ${MPI_CXX_LIBRARIES}
+    ${TURBOJPEG_LIBRARY}
   )
 endif()
 

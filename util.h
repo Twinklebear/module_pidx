@@ -40,3 +40,4 @@ std::array<int, 3> computeGhostFaces(const ospcommon::vec3i &brickId,
   }
 
 std::string pidx_error_to_string(const PIDX_return_code rc);
+
