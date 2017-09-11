@@ -55,6 +55,7 @@ void cursorPosCallback(GLFWwindow *window, double x, double y) {
   if (state->prevMouse != vec2f(-1)) {
     const bool leftDown = glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS;
     const bool rightDown = glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_RIGHT) == GLFW_PRESS;
+    const bool middleDown = glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_MIDDLE) == GLFW_PRESS;
     const vec2f prev = state->prevMouse;
 
     if (leftDown) {
@@ -66,6 +67,14 @@ void cursorPosCallback(GLFWwindow *window, double x, double y) {
       state->cameraChanged = true;
     } else if (rightDown) {
       state->camera.zoom(mouse.y - prev.y);
+      state->cameraChanged = true;
+    } else if (middleDown) {
+      const vec2f mouseFrom(clamp(prev.x * 2.f / state->app.fbSize.x - 1.f,  -1.f, 1.f),
+                            clamp(1.f - 2.f * prev.y / state->app.fbSize.y, -1.f, 1.f));
+      const vec2f mouseTo(clamp(mouse.x * 2.f / state->app.fbSize.x - 1.f,  -1.f, 1.f),
+                          clamp(1.f - 2.f * mouse.y / state->app.fbSize.y, -1.f, 1.f));
+      const vec2f mouseDelta = mouseTo - mouseFrom;
+      state->camera.pan(mouseDelta);
       state->cameraChanged = true;
     }
   }
