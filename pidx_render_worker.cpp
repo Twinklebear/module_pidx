@@ -30,11 +30,14 @@ int main(int argc, char **argv) {
   MPI_Init_thread(&argc, &argv, MPI_THREAD_SINGLE, &provided);
 
   std::string datasetPath;
+  size_t timestep = 0;
   for (int i = 1; i < argc; ++i) {
     if (std::strcmp("-dataset", argv[i]) == 0) {
       datasetPath = argv[++i];
     } else if (std::strcmp("-port", argv[i]) == 0) {
       port = std::atoi(argv[++i]);
+    } else if (std::strcmp("-timestep", argv[i]) == 0) {
+      timestep = std::atoll(argv[++i]);
     }
   }
   if (datasetPath.empty()) {
@@ -76,7 +79,7 @@ int main(int argc, char **argv) {
   AppState app;
 
   Model model;
-  PIDXVolume pidxVolume(datasetPath, tfcn);
+  PIDXVolume pidxVolume(datasetPath, tfcn, timestep);
   // TODO: Update based on volume
   box3f worldBounds(vec3f(-64), vec3f(64));
 
