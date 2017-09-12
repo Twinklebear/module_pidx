@@ -1,4 +1,9 @@
 #include <cmath>
+#include <vector>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <unistd.h>
+#include <dirent.h>
 #include "ospcommon/vec.h"
 #include "PIDX.h"
 #include "util.h"
@@ -45,6 +50,31 @@ std::array<int, 3> computeGhostFaces(const vec3i &brickId, const vec3i &grid) {
     }
   }
   return faces;
+}
+
+UintahTimestep::UintahTimestep(const size_t timestep, const std::string &path)
+  : timestep(timestep), path(path)
+{}
+
+std::vector<UintahTimestep> collectUintahTimesteps(const std::string &dir) {
+  DIR *dp = opendir(dir.c_str());
+  if (!dp) {
+    throw std::runtime_error("failed to open directory: " + dir);
+  }
+
+  std::vector<UintahTimestep> timesteps;
+  for (dirent *e = readdir(dp); e; e = readdir(dp)) {
+    const std::string idxFile = dir + "/" + std::string(e->d_name) + "/l0/CCVars.idx";
+    struct stat fileStat = {0};
+    if (stat(idxFile.c_str(), &fileStat) == 0) {
+      // The timestep files are in the pattern t######, so take out the t
+      const std::string fname = e->d_name + 1;
+      timesteps.emplace_back(size_t(std::stoull(e->d_name + 1)), idxFile);
+    } else {
+      std::cout << "Non-dir: " << e->d_name << "\n";
+    }
+  }
+  return timesteps;
 }
 
 std::string pidx_error_to_string(const PIDX_return_code rc) {
