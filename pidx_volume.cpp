@@ -6,8 +6,10 @@
 using namespace ospray::cpp;
 using namespace ospcommon;
 
-PIDXVolume::PIDXVolume(const std::string &path, TransferFunction tfcn)
-  : datasetPath(path), volume("block_bricked_volume"), transferFunction(tfcn)
+PIDXVolume::PIDXVolume(const std::string &path, TransferFunction tfcn,
+    size_t currentTimestep)
+  : datasetPath(path), volume("block_bricked_volume"), transferFunction(tfcn),
+  currentTimestep(currentTimestep)
 {
   PIDX_CHECK(PIDX_create_access(&pidxAccess));
   PIDX_CHECK(PIDX_set_mpi_access(pidxAccess, MPI_COMM_WORLD));
@@ -25,7 +27,8 @@ void PIDXVolume::update() {
         pidxAccess, pdims, &pidxFile));
   fullDims = vec3sz(pdims[0], pdims[1], pdims[2]);
 
-  PIDX_CHECK(PIDX_set_current_time_step(pidxFile, 229829));
+  std::cout << "currentimestep = " << currentTimestep << std::endl;
+  PIDX_CHECK(PIDX_set_current_time_step(pidxFile, currentTimestep));
 
   if (pidxVars.empty()) {
     int variableCount = 0;
