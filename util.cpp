@@ -70,8 +70,6 @@ std::vector<UintahTimestep> collectUintahTimesteps(const std::string &dir) {
       // The timestep files are in the pattern t######, so take out the t
       const std::string fname = e->d_name + 1;
       timesteps.emplace_back(size_t(std::stoull(e->d_name + 1)), idxFile);
-    } else {
-      std::cout << "Non-dir: " << e->d_name << "\n";
     }
   }
   return timesteps;
