@@ -30,18 +30,26 @@ int main(int argc, char **argv) {
 
   vec2i fbSize(1080, 1920);
   std::string datasetPath;
+  std::string timestepDir;
   std::string outputPrefix = "frame";
+  // Show each timestep for 4 frames
+  size_t framesPerTimestep = 4;
   for (int i = 1; i < argc; ++i) {
     if (std::strcmp("-dataset", argv[i]) == 0) {
       datasetPath = argv[++i];
     } else if (std::strcmp("-o", argv[i]) == 0) {
       outputPrefix = argv[++i];
+    } else if (std::strcmp("-timesteps", argv[i]) == 0) {
+      timestepDir = argv[++i];
     }
   }
 
-  if (datasetPath.empty()) {
-    throw std::runtime_error("Usage: mpirun -np <N> ./pidx_movie_renderer"
-        " -dataset <dataset.idx>");
+  if (datasetPath.empty() && timestepDir.empty()) {
+    throw std::runtime_error("Usage: mpirun -np <N> ./pidx_movie_renderer [options]\n"
+        "Options:\n"
+        "-dataset <dataset.idx>       Specify the IDX datset to load and render\n"
+        "-timesteps <dir>             Specify the directory containing Uintah timesteps\n"
+        );
   }
 
   ospLoadModule("mpi");
@@ -76,8 +84,20 @@ int main(int argc, char **argv) {
   }
 
   Model model;
-  PIDXVolume pidxVolume(datasetPath, tfcn);
-  pidxVolume.volume.set("samplingRate", 0.5);
+  // We've got a set of timesteps instead of a single dataset
+  std::vector<UintahTimestep> uintahTimesteps;
+  size_t currentTimestep = 0;
+  if (datasetPath.empty()) {
+    uintahTimesteps = collectUintahTimesteps(timestepDir);
+    std::cout << "Read " << uintahTimesteps.size() << " timestep dirs" << std::endl;
+    // Follow the Uintah directory structure for PIDX to the CCVars.idx for
+    // the timestep
+    datasetPath = uintahTimesteps[0].path;
+    std::cout << "dataset for first timestep = " << datasetPath
+      << ", timestep = " << uintahTimesteps[0].timestep << std::endl;
+    currentTimestep = uintahTimesteps[0].timestep;
+  }
+  PIDXVolume pidxVolume(datasetPath, tfcn, currentTimestep);
   pidxVolume.volume.commit();
   // TODO: Update based on volume
   box3f worldBounds(vec3f(-64), vec3f(64));
@@ -110,10 +130,29 @@ int main(int argc, char **argv) {
 
   float avgFrameTime = 0;
   size_t nframes = 100;
-  size_t spp = 8;
+  size_t spp = 1;
   float radiansPerSecond = 1;
   for (size_t i = 0; i < nframes; ++i) {
     using namespace std::chrono;
+
+    if (i != 0 && !uintahTimesteps.empty() && i % framesPerTimestep == 0) {
+      std::cout << "Moving to next sim timestep" << std::endl;
+      const size_t nextTimestep = i / framesPerTimestep;
+      if (nextTimestep < uintahTimesteps.size()) {
+        const UintahTimestep &tstep = uintahTimesteps[nextTimestep];
+        datasetPath = tstep.path;
+        std::cout << "dataset for timestep " << nextTimestep << " = "
+          << datasetPath << std::endl;
+
+        model.removeVolume(pidxVolume.volume);
+        pidxVolume = PIDXVolume(datasetPath, tfcn, tstep.timestep);
+        pidxVolume.volume.commit();
+        model.addVolume(pidxVolume.volume);
+        model.commit();
+      }
+    }
+
+    std::cout << "Rendering frame " << i << std::endl;
 
     float time = i / 24.0;
     cameraPos.y = 1600 * std::sin(time * radiansPerSecond);
