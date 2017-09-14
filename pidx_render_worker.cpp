@@ -66,7 +66,7 @@ int main(int argc, char **argv) {
       vec3f(1, 0, 0),
       vec3f(0.5, 0, 0)
     };
-    const std::vector<float> opacities = {0.0001, 1.0};
+    const std::vector<float> opacities = {0.0001, 0.02, 0.02, 0.01};
     ospray::cpp::Data colorsData(colors.size(), OSP_FLOAT3, colors.data());
     ospray::cpp::Data opacityData(opacities.size(), OSP_FLOAT, opacities.data());
     colorsData.commit();
@@ -119,6 +119,8 @@ int main(int argc, char **argv) {
   std::vector<vec3f> tfcnColors;
   std::vector<float> tfcnAlphas;
   while (!app.quit) {
+    using namespace std::chrono;
+
     if (app.cameraChanged) {
       camera.set("pos", app.v[0]);
       camera.set("dir", app.v[1]);
@@ -128,9 +130,16 @@ int main(int argc, char **argv) {
       fb.clear(OSP_FB_COLOR | OSP_FB_ACCUM | OSP_FB_VARIANCE);
       app.cameraChanged = false;
     }
+    auto startFrame = high_resolution_clock::now();
+
     renderer.renderFrame(fb, OSP_FB_COLOR);
 
+    auto endFrame = high_resolution_clock::now();
+
     if (rank == 0) {
+      std::cout << "Frame took " << duration_cast<milliseconds>(endFrame - startFrame).count()
+        << "ms\n";
+
       uint32_t *img = (uint32_t*)fb.map(OSP_FB_COLOR);
       // TODO: compress it
       ospcommon::write(client, img, app.fbSize.x * app.fbSize.y * sizeof(uint32_t));

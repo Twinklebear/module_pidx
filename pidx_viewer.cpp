@@ -199,12 +199,13 @@ int main(int argc, char **argv) {
     windowState->cameraChanged = false;
     windowState->isImGuiHovered = ImGui::IsMouseHoveringAnyWindow();
 
+    ospcommon::write(renderServer, &app, sizeof(AppState));
+    ospcommon::flush(renderServer);
+
     if (app.fbSizeChanged) {
       app.fbSizeChanged = false;
       glViewport(0, 0, app.fbSize.x, app.fbSize.y);
     }
-    ospcommon::write(renderServer, &app, sizeof(AppState));
-    ospcommon::flush(renderServer);
   }
 
   tjDestroy(decompressor);
