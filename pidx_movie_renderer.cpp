@@ -26,14 +26,14 @@ int main(int argc, char **argv) {
   // TODO: OpenMPI sucks as always and doesn't support pt2pt one-sided
   // communication with thread multiple. This can trigger a hang in OSPRay
   // if you're not using OpenMPI you can change this to MPI_THREAD_MULTIPLE
+  //MPI_Init_thread(&argc, &argv, MPI_THREAD_MULTIPLE, &provided);
   MPI_Init_thread(&argc, &argv, MPI_THREAD_SINGLE, &provided);
 
   vec2i fbSize(1080, 1920);
   std::string datasetPath;
   std::string timestepDir;
   std::string outputPrefix = "frame";
-  // Show each timestep for 4 frames
-  size_t framesPerTimestep = 4;
+  size_t framesPerTimestep = 2;
   for (int i = 1; i < argc; ++i) {
     if (std::strcmp("-dataset", argv[i]) == 0) {
       datasetPath = argv[++i];
@@ -131,7 +131,7 @@ int main(int argc, char **argv) {
   float avgFrameTime = 0;
   size_t nframes = 100;
   size_t spp = 1;
-  float radiansPerSecond = 1;
+  float radiansPerSecond = 0.5;
   for (size_t i = 0; i < nframes; ++i) {
     using namespace std::chrono;
 
