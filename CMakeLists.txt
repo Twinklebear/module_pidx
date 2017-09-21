@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.1)
 project(module_pidx)
 
-option(OSPRAY_MODULE_PIDX "PIDX module" ON) 
+option(OSPRAY_MODULE_PIDX "PIDX module" ON)
 
 if (OSPRAY_MODULE_PIDX)
 
@@ -25,7 +25,7 @@ if (OSPRAY_MODULE_PIDX)
 
   FIND_LIBRARY(TURBOJPEG_LIBRARY
     NAMES turbojpeg
-    PATHS 
+    PATHS
     $ENV{LIBJPEG_TURBO_DIR}/lib
     $ENV{TURBOJPEG_DIR}/lib
     #linux
@@ -59,7 +59,7 @@ if (OSPRAY_MODULE_PIDX)
       ${MPI_CXX_LIBRARIES}
       ${TURBOJPEG_LIBRARY}
     )
-   
+
     ospray_create_application(pidx_movie_renderer
       pidx_movie_renderer.cpp
     LINK
