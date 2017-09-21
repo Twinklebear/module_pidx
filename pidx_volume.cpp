@@ -13,10 +13,13 @@ PIDXVolume::PIDXVolume(const std::string &path, TransferFunction tfcn,
 {
   PIDX_CHECK(PIDX_create_access(&pidxAccess));
   PIDX_CHECK(PIDX_set_mpi_access(pidxAccess, MPI_COMM_WORLD));
-  currentVariable = 50;
+  currentVariable = 0;
   update();
 }
 PIDXVolume::~PIDXVolume() {
+  // TODO: Is the volume being released properly here?
+  // TODO: We should not close the access when rendering the movie since
+  // we need it around longer than an individual volume.
   PIDX_close_access(pidxAccess);
 }
 void PIDXVolume::update() {
@@ -105,6 +108,7 @@ void PIDXVolume::update() {
       reinterpret_cast<float*>(data.data()) + nLocalVals);
   // TODO: Need MPI Allreduce here
   vec2f localValueRange = vec2f(*minmax.first, *minmax.second);
+  std::cout << "Local range = " << localValueRange << "\n";
   MPI_Allreduce(&localValueRange.x, &valueRange.x, 1, MPI_FLOAT,
       MPI_MIN, MPI_COMM_WORLD);
   MPI_Allreduce(&localValueRange.y, &valueRange.y, 1, MPI_FLOAT,
@@ -112,7 +116,7 @@ void PIDXVolume::update() {
   if (rank == 0) {
     std::cout << "Value range = " << valueRange << "\n";
   }
-  valueRange = vec2f(0.0, 0.15);
+  //valueRange = vec2f(0.0, 0.15);
   transferFunction.set("valueRange", valueRange);
   transferFunction.commit();
 

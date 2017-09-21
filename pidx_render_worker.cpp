@@ -42,7 +42,7 @@ int main(int argc, char **argv) {
   }
   if (datasetPath.empty()) {
     throw std::runtime_error("Usage: mpirun -np <N> ./pidx_render_worker"
-        " -dataset <dataset.idx> -port <port>");
+        " -dataset <dataset.idx> -port <port> -timestep <timestep>");
   }
 
   ospLoadModule("mpi");
