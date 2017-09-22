@@ -2,6 +2,7 @@ cmake_minimum_required(VERSION 3.1)
 project(module_pidx)
 
 option(OSPRAY_MODULE_PIDX "PIDX module" ON)
+option(OSPRAY_MODULE_PIDX_VIEWER "PIDX remote viewer client" ON)
 
 if (OSPRAY_MODULE_PIDX)
 
@@ -86,20 +87,22 @@ if (OSPRAY_MODULE_PIDX)
       ${TURBOJPEG_LIBRARY}
     )
 
-    ospray_create_application(pidx_viewer
-      pidx_viewer.cpp
-      arcball.cpp
-    LINK
-      pidx_app_util
-      ${OPENGL_LIBRARIES}
-      ${GLFW_LIBRARY}
-      imgui
-      ospray
-      ospray_common
-      ospray_imgui3d_sg
-      ospray_sg
-      ${TURBOJPEG_LIBRARY}
-    )
+    if (OSPRAY_MODULE_PIDX_VIEWER)
+      ospray_create_application(pidx_viewer
+        pidx_viewer.cpp
+        arcball.cpp
+      LINK
+        pidx_app_util
+        ${OPENGL_LIBRARIES}
+        ${GLFW_LIBRARY}
+        imgui
+        ospray
+        ospray_common
+        ospray_imgui3d_sg
+        ospray_sg
+        ${TURBOJPEG_LIBRARY}
+      )
+    endif()
   endif()
 endif()
 
