@@ -13,7 +13,7 @@ PIDXVolume::PIDXVolume(const std::string &path, TransferFunction tfcn,
 {
   PIDX_CHECK(PIDX_create_access(&pidxAccess));
   PIDX_CHECK(PIDX_set_mpi_access(pidxAccess, MPI_COMM_WORLD));
-  currentVariable = 0;
+  currentVariable = 50;
   update();
 }
 PIDXVolume::~PIDXVolume() {
@@ -116,7 +116,7 @@ void PIDXVolume::update() {
   if (rank == 0) {
     std::cout << "Value range = " << valueRange << "\n";
   }
-  //valueRange = vec2f(0.0, 0.15);
+  valueRange = vec2f(0.0, 0.15);
   transferFunction.set("valueRange", valueRange);
   transferFunction.commit();
 
