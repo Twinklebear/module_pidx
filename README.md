@@ -9,8 +9,7 @@ To run the remote viewer first start the render workers on your compute nodes.
 
 ```bash
 mpirun -np <N> ./pidx_render_worker -dataset <dataset.idx> \
-    -port <port to listen on> \
-    -timestep <timestep to load>
+    -port <port to listen on> -timestep <timestep to load> -variable <variable-name>
 ```
 
 These workers will start and load the data. Once they're ready to connect to
