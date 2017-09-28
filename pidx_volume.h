@@ -22,11 +22,12 @@ struct PIDXVolume {
   ospcommon::vec2f valueRange;
 
   // UI data
+  std::string currentVariableName;
   int currentVariable;
   size_t currentTimestep;
 
   PIDXVolume(const std::string &path, ospray::cpp::TransferFunction tfcn,
-      size_t currentTimestep);
+	     const std::string &currentVariableName, size_t currentTimestep);
   ~PIDXVolume();
   void update();
 };

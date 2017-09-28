@@ -6,14 +6,16 @@
 using namespace ospray::cpp;
 using namespace ospcommon;
 
-PIDXVolume::PIDXVolume(const std::string &path, TransferFunction tfcn,
-    size_t currentTimestep)
-  : datasetPath(path), volume("block_bricked_volume"), transferFunction(tfcn),
-  currentTimestep(currentTimestep)
+PIDXVolume::PIDXVolume
+(const std::string &path, TransferFunction tfcn,
+ const std::string &currentVariableName, size_t currentTimestep)
+  : 
+  datasetPath(path), volume("block_bricked_volume"), transferFunction(tfcn),
+  currentVariableName(currentVariableName), currentTimestep(currentTimestep)
 {
   PIDX_CHECK(PIDX_create_access(&pidxAccess));
   PIDX_CHECK(PIDX_set_mpi_access(pidxAccess, MPI_COMM_WORLD));
-  currentVariable = 50;
+  currentVariable = -1;
   update();
 }
 PIDXVolume::~PIDXVolume() {
@@ -30,7 +32,9 @@ void PIDXVolume::update() {
         pidxAccess, pdims, &pidxFile));
   fullDims = vec3sz(pdims[0], pdims[1], pdims[2]);
 
-  std::cout << "currentimestep = " << currentTimestep << std::endl;
+  if (rank == 0) {
+     std::cout << "currentimestep = " << currentTimestep << std::endl;
+  }
   PIDX_CHECK(PIDX_set_current_time_step(pidxFile, currentTimestep));
 
   if (pidxVars.empty()) {
@@ -44,7 +48,16 @@ void PIDXVolume::update() {
       PIDX_CHECK(PIDX_set_current_variable_index(pidxFile, i));
       PIDX_variable variable;
       PIDX_CHECK(PIDX_get_current_variable(pidxFile, &variable));
-      pidxVars.push_back(variable->var_name);
+      pidxVars.push_back(variable->var_name);      
+      if (currentVariableName.compare(variable->var_name) == 0) {
+	currentVariable = i;
+      }
+    }
+
+    if (currentVariable == -1) {
+      currentVariable = 0;
+      std::cerr << "Variable name is not set. "
+	"Loading the first variable by default" << std::endl;
     }
   }
 
@@ -101,14 +114,16 @@ void PIDXVolume::update() {
   auto startLoad = high_resolution_clock::now();
   PIDX_CHECK(PIDX_close(pidxFile));
   auto endLoad = high_resolution_clock::now();
-  std::cout << "Rank " << rank << " load time: "
-    << duration_cast<milliseconds>(endLoad - startLoad).count() << "\n";
+
+  // std::cout << "Rank " << rank << " load time: "
+  //           << duration_cast<milliseconds>(endLoad - startLoad).count() << "\n";
 
   auto minmax = std::minmax_element(reinterpret_cast<float*>(data.data()),
       reinterpret_cast<float*>(data.data()) + nLocalVals);
   // TODO: Need MPI Allreduce here
   vec2f localValueRange = vec2f(*minmax.first, *minmax.second);
-  std::cout << "Local range = " << localValueRange << "\n";
+  // std::cout << "Local range = " << localValueRange << "\n";
+
   MPI_Allreduce(&localValueRange.x, &valueRange.x, 1, MPI_FLOAT,
       MPI_MIN, MPI_COMM_WORLD);
   MPI_Allreduce(&localValueRange.y, &valueRange.y, 1, MPI_FLOAT,
