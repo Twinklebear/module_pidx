@@ -98,7 +98,7 @@ if (OSPRAY_MODULE_PIDX)
       pidx_app_util
       ${OPENGL_LIBRARIES}
       ${GLFW_LIBRARY}
-      imgui
+      ospray_imgui
       ospray
       ospray_common
       ospray_imgui3d_sg
