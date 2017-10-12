@@ -38,7 +38,7 @@ int main(int argc, char **argv) {
     } else if (std::strcmp("-port", argv[i]) == 0) {
       port = std::atoi(argv[++i]);
     } else if (std::strcmp("-timestep", argv[i]) == 0) {
-      timestep = std::atoll(argv[++i]);   
+      timestep = std::atoll(argv[++i]);
     } else if (std::strcmp("-variable", argv[i]) == 0) {
       variableName = std::string(argv[++i]);
     }
@@ -57,6 +57,14 @@ int main(int argc, char **argv) {
 
   const int rank = mpicommon::world.rank;
   const int worldSize = mpicommon::world.size;
+
+  socket_t listenSocket = nullptr;
+  socket_t client = nullptr;
+  if (rank == 0) {
+    listenSocket = bind(port);
+    std::cout << "Rank 0 now listening for client" << std::endl;
+    client = listen(listenSocket);
+  }
 
   TransferFunction tfcn("piecewise_linear");
   // Fill in some initial data for transfer fcn
@@ -80,6 +88,7 @@ int main(int argc, char **argv) {
   }
 
   AppState app;
+  JPGCompressor compressor(90);
 
   Model model;
   PIDXVolume pidxVolume(datasetPath, tfcn, variableName, timestep);
@@ -109,14 +118,6 @@ int main(int argc, char **argv) {
   FrameBuffer fb(app.fbSize, OSP_FB_SRGBA, OSP_FB_COLOR | OSP_FB_ACCUM | OSP_FB_VARIANCE);
   fb.clear(OSP_FB_COLOR | OSP_FB_ACCUM | OSP_FB_VARIANCE);
 
-  socket_t listenSocket = nullptr;
-  socket_t client = nullptr;
-  if (rank == 0) {
-    listenSocket = bind(port);
-    std::cout << "Rank 0 now listening for client" << std::endl;
-    client = listen(listenSocket);
-  }
-
   mpicommon::world.barrier();
 
   std::vector<vec3f> tfcnColors;
@@ -144,8 +145,9 @@ int main(int argc, char **argv) {
         << "ms\n";
 
       uint32_t *img = (uint32_t*)fb.map(OSP_FB_COLOR);
-      // TODO: compress it
-      ospcommon::write(client, img, app.fbSize.x * app.fbSize.y * sizeof(uint32_t));
+      auto jpg = compressor.compress(img, app.fbSize.x, app.fbSize.y);
+      ospcommon::write(client, &jpg.second, sizeof(jpg.second));
+      ospcommon::write(client, jpg.first, jpg.second);
       ospcommon::flush(client);
       fb.unmap(img);
 

@@ -19,8 +19,7 @@
 using namespace ospray::cpp;
 using namespace ospcommon;
 
-std::vector<uint32_t> imgBuf;
-vec2i imgBufSize;
+std::vector<unsigned char> jpgBuf;
 
 // Extra stuff we need in GLFW callbacks
 struct WindowState {
@@ -45,9 +44,10 @@ void keyCallback(GLFWwindow *window, int key, int scancode, int action, int mods
         break;
       case 'P':
       case 'p':
-        if (!imgBuf.empty()) {
-          utility::writePPM("screenshot.ppm", imgBufSize.x, imgBufSize.y, imgBuf.data());
-          std::cout << "Screenshot saved to 'screenshot.ppm'\n";
+        if (!jpgBuf.empty()) {
+          std::ofstream fout("screenshot.jpg", std::ios::binary);
+          fout.write(reinterpret_cast<const char*>(jpgBuf.data()), jpgBuf.size());
+          std::cout << "Screenshot saved to 'screenshot.jpg'\n";
         }
         break;
       default:
@@ -148,25 +148,21 @@ int main(int argc, char **argv) {
   glfwSetScrollCallback(window, ImGui_ImplGlfwGL3_ScrollCallback);
   glfwSetCharCallback(window, charCallback);
 
-  tjhandle decompressor = tjInitDecompress();
+  JPGDecompressor decompressor;
   socket_t renderServer = connect(server.c_str(), port);
 
+  std::vector<uint32_t> imgBuf;
   std::vector<vec3f> tfcnColors;
   std::vector<float> tfcnAlphas;
   while (!app.quit) {
-    // Receive frame from network
-    /*
-    int imgBytes = ospcommon::read_int(renderServer);
-    std::vector<char> jpgBuf(imgBytes, 0);
-    ospcommon::read(renderServer, jpgBuf.data(), imgBytes);
+    // Receive jpg from network
+    unsigned long jpgSize = 0;
+    ospcommon::read(renderServer, &jpgSize, sizeof(jpgSize));
+    jpgBuf.resize(jpgSize, 0);
+    ospcommon::read(renderServer, jpgBuf.data(), jpgSize);
 
-    std::vector<char> imgBuf(sizeof(uint32_t) * app.fbSize.x, app.fbSize.y, 0);
-    tjDecompress2(decompressor, jpgBuf.data(), imgBytes, imgBuf.data(),
-        app.fbSize.x, width * 4, app.fbSize.y, TJPF_RGBA, 0);
-    */
     imgBuf.resize(app.fbSize.x * app.fbSize.y, 0);
-    ospcommon::read(renderServer, imgBuf.data(), imgBuf.size() * sizeof(uint32_t));
-    imgBufSize = app.fbSize;
+    decompressor.decompress(jpgBuf.data(), jpgSize, app.fbSize.x, app.fbSize.y, imgBuf);
 
     glClear(GL_COLOR_BUFFER_BIT);
     glDrawPixels(app.fbSize.x, app.fbSize.y, GL_RGBA, GL_UNSIGNED_BYTE, imgBuf.data());
@@ -220,7 +216,6 @@ int main(int argc, char **argv) {
     }
   }
 
-  tjDestroy(decompressor);
   ImGui_ImplGlfwGL3_Shutdown();
   glfwDestroyWindow(window);
 
