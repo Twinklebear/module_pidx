@@ -131,7 +131,7 @@ void PIDXVolume::update() {
   if (rank == 0) {
     std::cout << "Value range = " << valueRange << "\n";
   }
-  valueRange = vec2f(0.0, 0.15);
+  //valueRange = vec2f(0.0, 0.15);
   transferFunction.set("valueRange", valueRange);
   transferFunction.commit();
 
