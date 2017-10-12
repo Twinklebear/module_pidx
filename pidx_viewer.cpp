@@ -19,8 +19,8 @@
 using namespace ospray::cpp;
 using namespace ospcommon;
 
-const uint32_t* imgBufData = nullptr;
-vec2i           imgBufSize;
+std::vector<uint32_t> imgBuf;
+vec2i imgBufSize;
 
 // Extra stuff we need in GLFW callbacks
 struct WindowState {
@@ -45,9 +45,11 @@ void keyCallback(GLFWwindow *window, int key, int scancode, int action, int mods
         break;
       case 'P':
       case 'p':
-	if (imgBufData)
-	  utility::writePPM("screenshot.ppm",imgBufSize.x,imgBufSize.y, imgBufData);
-	break;
+        if (!imgBuf.empty()) {
+          utility::writePPM("screenshot.ppm", imgBufSize.x, imgBufSize.y, imgBuf.data());
+          std::cout << "Screenshot saved to 'screenshot.ppm'\n";
+        }
+        break;
       default:
         break;
     }
@@ -162,9 +164,8 @@ int main(int argc, char **argv) {
     tjDecompress2(decompressor, jpgBuf.data(), imgBytes, imgBuf.data(),
         app.fbSize.x, width * 4, app.fbSize.y, TJPF_RGBA, 0);
     */
-    std::vector<char> imgBuf(sizeof(uint32_t) * app.fbSize.x * app.fbSize.y, 0);
-    ospcommon::read(renderServer, imgBuf.data(), imgBuf.size());
-    imgBufData = (uint32_t*) imgBuf.data();
+    imgBuf.resize(app.fbSize.x * app.fbSize.y, 0);
+    ospcommon::read(renderServer, imgBuf.data(), imgBuf.size() * sizeof(uint32_t));
     imgBufSize = app.fbSize;
 
     glClear(GL_COLOR_BUFFER_BIT);
