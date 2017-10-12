@@ -34,6 +34,7 @@ int main(int argc, char **argv) {
   std::string timestepDir;
   std::string outputPrefix = "frame";
   size_t framesPerTimestep = 2;
+  std::string variableName;
   for (int i = 1; i < argc; ++i) {
     if (std::strcmp("-dataset", argv[i]) == 0) {
       datasetPath = argv[++i];
@@ -41,6 +42,8 @@ int main(int argc, char **argv) {
       outputPrefix = argv[++i];
     } else if (std::strcmp("-timesteps", argv[i]) == 0) {
       timestepDir = argv[++i];
+    } else if (std::strcmp("-variable", argv[i]) == 0) {
+      variableName = std::string(argv[++i]);
     }
   }
 
@@ -94,10 +97,10 @@ int main(int argc, char **argv) {
     // the timestep
     datasetPath = uintahTimesteps[0].path;
     std::cout << "dataset for first timestep = " << datasetPath
-      << ", timestep = " << uintahTimesteps[0].timestep << std::endl;
+	      << ", timestep = " << uintahTimesteps[0].timestep << std::endl;
     currentTimestep = uintahTimesteps[0].timestep;
   }
-  PIDXVolume pidxVolume(datasetPath, tfcn, currentTimestep);
+  PIDXVolume pidxVolume(datasetPath, tfcn, variableName, currentTimestep);
   pidxVolume.volume.commit();
   // TODO: Update based on volume
   box3f worldBounds(vec3f(-64), vec3f(64));
@@ -145,7 +148,7 @@ int main(int argc, char **argv) {
           << datasetPath << std::endl;
 
         model.removeVolume(pidxVolume.volume);
-        pidxVolume = PIDXVolume(datasetPath, tfcn, tstep.timestep);
+        pidxVolume = PIDXVolume(datasetPath, tfcn, variableName, tstep.timestep);
         pidxVolume.volume.commit();
         model.addVolume(pidxVolume.volume);
         model.commit();

@@ -31,18 +31,22 @@ int main(int argc, char **argv) {
 
   std::string datasetPath;
   size_t timestep = 0;
+  std::string variableName;
   for (int i = 1; i < argc; ++i) {
     if (std::strcmp("-dataset", argv[i]) == 0) {
       datasetPath = argv[++i];
     } else if (std::strcmp("-port", argv[i]) == 0) {
       port = std::atoi(argv[++i]);
     } else if (std::strcmp("-timestep", argv[i]) == 0) {
-      timestep = std::atoll(argv[++i]);
+      timestep = std::atoll(argv[++i]);   
+    } else if (std::strcmp("-variable", argv[i]) == 0) {
+      variableName = std::string(argv[++i]);
     }
+
   }
   if (datasetPath.empty()) {
     throw std::runtime_error("Usage: mpirun -np <N> ./pidx_render_worker"
-        " -dataset <dataset.idx> -port <port> -timestep <timestep>");
+        " -dataset <dataset.idx> -port <port> -timestep <timestep> -variable <variable>");
   }
 
   ospLoadModule("mpi");
@@ -71,7 +75,6 @@ int main(int argc, char **argv) {
     ospray::cpp::Data opacityData(opacities.size(), OSP_FLOAT, opacities.data());
     colorsData.commit();
     opacityData.commit();
-
     tfcn.set("colors", colorsData);
     tfcn.set("opacities", opacityData);
   }
@@ -79,7 +82,7 @@ int main(int argc, char **argv) {
   AppState app;
 
   Model model;
-  PIDXVolume pidxVolume(datasetPath, tfcn, timestep);
+  PIDXVolume pidxVolume(datasetPath, tfcn, variableName, timestep);
   // TODO: Update based on volume
   box3f worldBounds(vec3f(-64), vec3f(64));
 

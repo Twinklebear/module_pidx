@@ -7,6 +7,7 @@
 #include <GLFW/glfw3.h>
 #include "ospray/ospray_cpp/TransferFunction.h"
 #include "ospcommon/networking/Socket.h"
+#include "ospcommon/utility/SaveImage.h"
 #include "widgets/transferFunction.h"
 #include "common/sg/transferFunction/TransferFunction.h"
 #include "widgets/imgui_impl_glfw_gl3.h"
@@ -17,6 +18,9 @@
 
 using namespace ospray::cpp;
 using namespace ospcommon;
+
+const uint32_t* imgBufData = nullptr;
+vec2i           imgBufSize;
 
 // Extra stuff we need in GLFW callbacks
 struct WindowState {
@@ -39,6 +43,11 @@ void keyCallback(GLFWwindow *window, int key, int scancode, int action, int mods
       case GLFW_KEY_ESCAPE:
         glfwSetWindowShouldClose(window, true);
         break;
+      case 'P':
+      case 'p':
+	if (imgBufData)
+	  utility::writePPM("screenshot.ppm",imgBufSize.x,imgBufSize.y, imgBufData);
+	break;
       default:
         break;
     }
@@ -152,9 +161,11 @@ int main(int argc, char **argv) {
     std::vector<char> imgBuf(sizeof(uint32_t) * app.fbSize.x, app.fbSize.y, 0);
     tjDecompress2(decompressor, jpgBuf.data(), imgBytes, imgBuf.data(),
         app.fbSize.x, width * 4, app.fbSize.y, TJPF_RGBA, 0);
-        */
+    */
     std::vector<char> imgBuf(sizeof(uint32_t) * app.fbSize.x * app.fbSize.y, 0);
     ospcommon::read(renderServer, imgBuf.data(), imgBuf.size());
+    imgBufData = (uint32_t*) imgBuf.data();
+    imgBufSize = app.fbSize;
 
     glClear(GL_COLOR_BUFFER_BIT);
     glDrawPixels(app.fbSize.x, app.fbSize.y, GL_RGBA, GL_UNSIGNED_BYTE, imgBuf.data());
