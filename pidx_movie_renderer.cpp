@@ -97,7 +97,7 @@ int main(int argc, char **argv) {
     // the timestep
     datasetPath = uintahTimesteps[0].path;
     std::cout << "dataset for first timestep = " << datasetPath
-	      << ", timestep = " << uintahTimesteps[0].timestep << std::endl;
+      << ", timestep = " << uintahTimesteps[0].timestep << std::endl;
     currentTimestep = uintahTimesteps[0].timestep;
   }
   PIDXVolume pidxVolume(datasetPath, tfcn, variableName, currentTimestep);

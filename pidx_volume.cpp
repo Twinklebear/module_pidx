@@ -6,11 +6,9 @@
 using namespace ospray::cpp;
 using namespace ospcommon;
 
-PIDXVolume::PIDXVolume
-(const std::string &path, TransferFunction tfcn,
- const std::string &currentVariableName, size_t currentTimestep)
-  : 
-  datasetPath(path), volume("block_bricked_volume"), transferFunction(tfcn),
+PIDXVolume::PIDXVolume(const std::string &path, TransferFunction tfcn,
+    const std::string &currentVariableName, size_t currentTimestep)
+  : datasetPath(path), volume("block_bricked_volume"), transferFunction(tfcn),
   currentVariableName(currentVariableName), currentTimestep(currentTimestep)
 {
   PIDX_CHECK(PIDX_create_access(&pidxAccess));
@@ -23,6 +21,8 @@ PIDXVolume::~PIDXVolume() {
   // TODO: We should not close the access when rendering the movie since
   // we need it around longer than an individual volume.
   PIDX_close_access(pidxAccess);
+  volume.release();
+  transferFunction.release();
 }
 void PIDXVolume::update() {
   const int rank = mpicommon::world.rank;
@@ -48,16 +48,16 @@ void PIDXVolume::update() {
       PIDX_CHECK(PIDX_set_current_variable_index(pidxFile, i));
       PIDX_variable variable;
       PIDX_CHECK(PIDX_get_current_variable(pidxFile, &variable));
-      pidxVars.push_back(variable->var_name);      
+      pidxVars.push_back(variable->var_name);
       if (currentVariableName.compare(variable->var_name) == 0) {
-	currentVariable = i;
+        currentVariable = i;
       }
     }
 
     if (currentVariable == -1) {
       currentVariable = 0;
       std::cerr << "Variable name is not set. "
-	"Loading the first variable by default" << std::endl;
+        "Loading the first variable by default" << std::endl;
     }
   }
 
