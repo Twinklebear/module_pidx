@@ -129,6 +129,8 @@ int main(int argc, char **argv) {
   FrameBuffer fb(fbSize, OSP_FB_SRGBA, OSP_FB_COLOR | OSP_FB_ACCUM);
   fb.clear(OSP_FB_COLOR | OSP_FB_ACCUM);
 
+  JPGCompressor compressor(90);
+
   mpicommon::world.barrier();
 
   float avgFrameTime = 0;
@@ -184,9 +186,12 @@ int main(int argc, char **argv) {
       uint32_t *img = (uint32_t*)fb.map(OSP_FB_COLOR);
       char frameStr[16] = {0};
       std::snprintf(frameStr, 15, "%08lu", i);
-      save_jpeg_file(outputPrefix + "-" + std::string(frameStr) + ".jpg",
-          img, fbSize.x, fbSize.y);
+      auto jpg = compressor.compress(img, fbSize.x, fbSize.y);
       fb.unmap(img);
+
+      const std::string imgName = outputPrefix + "-" + std::string(frameStr) + ".jpg";
+      std::ofstream fout(imgName.c_str(), std::ios::binary);
+      fout.write(reinterpret_cast<const char*>(jpg.first), jpg.second);
     }
   }
   if (rank == 0) {
