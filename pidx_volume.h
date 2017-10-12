@@ -27,7 +27,7 @@ struct PIDXVolume {
   size_t currentTimestep;
 
   PIDXVolume(const std::string &path, ospray::cpp::TransferFunction tfcn,
-	     const std::string &currentVariableName, size_t currentTimestep);
+      const std::string &currentVariableName, size_t currentTimestep);
   ~PIDXVolume();
   void update();
 };
