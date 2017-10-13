@@ -87,6 +87,7 @@ int main(int argc, char **argv) {
   }
 
   AppState app;
+  AppData appdata;
 
   Model model;
   PIDXVolume pidxVolume(datasetPath, tfcn, variableName, timestep);
@@ -118,8 +119,6 @@ int main(int argc, char **argv) {
 
   mpicommon::world.barrier();
 
-  std::vector<vec3f> tfcnColors;
-  std::vector<float> tfcnAlphas;
   while (!app.quit) {
     using namespace std::chrono;
 
@@ -146,7 +145,7 @@ int main(int argc, char **argv) {
       client->send_frame(img, app.fbSize.x, app.fbSize.y);
       fb.unmap(img);
 
-      client->recieve_app_state(app);
+      client->recieve_app_state(app, appdata);
     }
 
     // Send out the shared app state that the workers need to know, e.g. camera
@@ -162,24 +161,24 @@ int main(int argc, char **argv) {
       app.fbSizeChanged = false;
     }
     if (app.tfcnChanged) {
-      size_t sz = tfcnColors.size();
+      size_t sz = appdata.tfcn_colors.size();
       MPI_Bcast(&sz, sizeof(size_t), MPI_BYTE, 0, MPI_COMM_WORLD);
       if (rank != 0) {
-        tfcnColors.resize(sz);
+        appdata.tfcn_colors.resize(sz);
       }
-      MPI_Bcast(tfcnColors.data(), sizeof(vec3f) * tfcnColors.size(), MPI_BYTE,
-                0, MPI_COMM_WORLD);
+      MPI_Bcast(appdata.tfcn_colors.data(), sizeof(vec3f) * appdata.tfcn_colors.size(),
+          MPI_BYTE, 0, MPI_COMM_WORLD);
 
-      sz = tfcnAlphas.size();
+      sz = appdata.tfcn_alphas.size();
       MPI_Bcast(&sz, sizeof(size_t), MPI_BYTE, 0, MPI_COMM_WORLD);
       if (rank != 0) {
-        tfcnAlphas.resize(sz);
+        appdata.tfcn_alphas.resize(sz);
       }
-      MPI_Bcast(tfcnAlphas.data(), sizeof(float) * tfcnAlphas.size(), MPI_BYTE,
+      MPI_Bcast(appdata.tfcn_alphas.data(), sizeof(float) * appdata.tfcn_alphas.size(), MPI_BYTE,
                 0, MPI_COMM_WORLD);
 
-      Data colorData(tfcnColors.size(), OSP_FLOAT3, tfcnColors.data());
-      Data alphaData(tfcnAlphas.size(), OSP_FLOAT, tfcnAlphas.data());
+      Data colorData(appdata.tfcn_colors.size(), OSP_FLOAT3, appdata.tfcn_colors.data());
+      Data alphaData(appdata.tfcn_alphas.size(), OSP_FLOAT, appdata.tfcn_alphas.data());
       colorData.commit();
       alphaData.commit();
 

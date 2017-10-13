@@ -16,6 +16,13 @@ struct AppState {
   AppState();
 };
 
+// Struct for holding the other app data buffers and info that
+// we can't bcast directly.
+struct AppData {
+  std::vector<ospcommon::vec3f> tfcn_colors;
+  std::vector<float> tfcn_alphas;
+};
+
 // Some of these utils for computing the gridding and ghost region
 // are from the gensv library in the OSPRay's mpi module
 enum GhostFace {

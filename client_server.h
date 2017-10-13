@@ -17,6 +17,7 @@ class ServerConnection {
   std::mutex frame_mutex;
 
   AppState app_state;
+  AppData app_data;
   std::mutex state_mutex;
 
   std::thread server_thread;
@@ -30,7 +31,7 @@ public:
    */
   bool get_new_frame(std::vector<unsigned char> &buf);
   // Update the app state to be sent over the network for the next frame
-  void update_app_state(const AppState &state);
+  void update_app_state(const AppState &state, const AppData &data);
 
 private:
   void connection_thread();
@@ -45,6 +46,6 @@ class ClientConnection {
 public:
   ClientConnection(const int port);
   void send_frame(const uint32_t *img, int width, int height);
-  void recieve_app_state(AppState &app);
+  void recieve_app_state(AppState &app, AppData &data);
 };
 

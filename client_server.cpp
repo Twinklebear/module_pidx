@@ -24,9 +24,15 @@ bool ServerConnection::get_new_frame(std::vector<unsigned char> &buf) {
   }
   return false;
 }
-void ServerConnection::update_app_state(const AppState &state) {
+void ServerConnection::update_app_state(const AppState &state, const AppData &data) {
   std::lock_guard<std::mutex> lock(state_mutex);
-  app_state = state;
+  app_state.v = state.v;
+  app_state.fbSize = state.fbSize;
+  app_state.cameraChanged = state.cameraChanged ? state.cameraChanged : app_state.cameraChanged;
+  app_state.fbSizeChanged = state.fbSizeChanged ? state.fbSizeChanged : app_state.fbSizeChanged;
+  app_state.tfcnChanged = state.tfcnChanged ? state.tfcnChanged : app_state.tfcnChanged;
+
+  app_data = data;
 }
 void ServerConnection::connection_thread() {
   ospcommon::socket_t render_server = ospcommon::connect(server_host.c_str(), server_port);
@@ -46,10 +52,24 @@ void ServerConnection::connection_thread() {
     {
       std::lock_guard<std::mutex> lock(state_mutex);
       ospcommon::write(render_server, &app_state, sizeof(AppState));
+      if (app_state.tfcnChanged) {
+        size_t size = app_data.tfcn_colors.size();
+        ospcommon::write(render_server, &size, sizeof(size_t));
+        ospcommon::write(render_server, app_data.tfcn_colors.data(),
+            app_data.tfcn_colors.size() * sizeof(ospcommon::vec3f));
+
+        size = app_data.tfcn_alphas.size();
+        ospcommon::write(render_server, &size, sizeof(size_t));
+        ospcommon::write(render_server, app_data.tfcn_alphas.data(),
+            app_data.tfcn_alphas.size() * sizeof(float));
+      }
       ospcommon::flush(render_server);
       if (app_state.quit) {
         return;
       }
+      app_state.tfcnChanged = false;
+      app_state.cameraChanged = false;
+      app_state.fbSizeChanged = false;
     }
   }
 }
@@ -69,7 +89,19 @@ void ClientConnection::send_frame(const uint32_t *img, int width, int height) {
   ospcommon::write(client, jpg.first, jpg.second);
   ospcommon::flush(client);
 }
-void ClientConnection::recieve_app_state(AppState &app) {
+void ClientConnection::recieve_app_state(AppState &app, AppData &data) {
   ospcommon::read(client, &app, sizeof(AppState));
+  if (app.tfcnChanged) {
+    size_t size = 0;
+    ospcommon::read(client, &size, sizeof(size_t));
+    data.tfcn_colors.resize(size, ospcommon::vec3f(0));
+    ospcommon::read(client, data.tfcn_colors.data(),
+        data.tfcn_colors.size() * sizeof(ospcommon::vec3f));
+
+    ospcommon::read(client, &size, sizeof(size_t));
+    data.tfcn_alphas.resize(size, 0.f);
+    ospcommon::read(client, data.tfcn_alphas.data(),
+        data.tfcn_alphas.size() * sizeof(float));
+  }
 }
 

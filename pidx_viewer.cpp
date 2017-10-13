@@ -118,6 +118,7 @@ int main(int argc, char **argv) {
   }
 
   AppState app;
+  AppData appdata;
   // TODO: Update based on volume?
   box3f worldBounds(vec3f(-64), vec3f(64));
   Arcball arcballCamera(worldBounds);
@@ -152,8 +153,6 @@ int main(int argc, char **argv) {
   ServerConnection server(serverhost, port, app);
 
   std::vector<uint32_t> imgBuf;
-  std::vector<vec3f> tfcnColors;
-  std::vector<float> tfcnAlphas;
   while (!app.quit) {
     imgBuf.resize(app.fbSize.x * app.fbSize.y, 0);
     if (server.get_new_frame(jpgBuf)) {
@@ -182,16 +181,14 @@ int main(int argc, char **argv) {
     tfnWidget->render();
 
     if (transferFcn->childrenLastModified() != tfcnTimeStamp) {
-      tfcnColors = transferFcn->child("colors").nodeAs<ospray::sg::DataVector3f>()->v;
+      appdata.tfcn_colors = transferFcn->child("colors").nodeAs<ospray::sg::DataVector3f>()->v;
       const auto &ospAlpha = transferFcn->child("alpha").nodeAs<ospray::sg::DataVector2f>()->v;
-      /*
-      tfcnAlphas.clear();
-      std::transform(ospAlpha.begin(), ospAlpha.end(), std::back_inserter(tfcnAlphas),
+      appdata.tfcn_alphas.clear();
+      std::transform(ospAlpha.begin(), ospAlpha.end(), std::back_inserter(appdata.tfcn_alphas),
           [](const vec2f &a) {
             return a.y;
           });
       app.tfcnChanged = true;
-      */
     }
 
     const vec3f eye = windowState->camera.eyePos();
@@ -204,12 +201,13 @@ int main(int argc, char **argv) {
     windowState->cameraChanged = false;
     windowState->isImGuiHovered = ImGui::IsMouseHoveringAnyWindow();
 
-    server.update_app_state(app);
+    server.update_app_state(app, appdata);
 
     if (app.fbSizeChanged) {
       app.fbSizeChanged = false;
       glViewport(0, 0, app.fbSize.x, app.fbSize.y);
     }
+    app.tfcnChanged = false;
   }
 
   ImGui_ImplGlfwGL3_Shutdown();
