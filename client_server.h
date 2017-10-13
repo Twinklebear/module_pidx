@@ -45,7 +45,7 @@ class ClientConnection {
 
 public:
   ClientConnection(const int port);
-  void send_frame(const uint32_t *img, int width, int height);
+  void send_frame(uint32_t *img, int width, int height);
   void recieve_app_state(AppState &app, AppData &data);
 };
 

@@ -12,10 +12,10 @@ JPGCompressor::~JPGCompressor() {
   }
   tjDestroy(compressor);
 }
-const std::pair<unsigned char*, unsigned long> JPGCompressor::compress(const uint32_t *pixels,
+const std::pair<unsigned char*, unsigned long> JPGCompressor::compress(uint32_t *pixels,
     int width, int height)
 {
-  const int rc = tjCompress2(compressor, reinterpret_cast<const unsigned char*>(pixels),
+  const int rc = tjCompress2(compressor, reinterpret_cast<unsigned char*>(pixels),
       width, width * 4, height, TJPF_RGBA, &buffer, &bufsize, TJSAMP_420,
       quality, TJFLAG_BOTTOMUP);
   if (rc != 0) {
@@ -28,7 +28,7 @@ JPGDecompressor::JPGDecompressor() : decompressor(tjInitDecompress()) {}
 JPGDecompressor::~JPGDecompressor() {
   tjDestroy(decompressor);
 }
-void JPGDecompressor::decompress(const unsigned char *jpg, const unsigned long jpeg_size,
+void JPGDecompressor::decompress(unsigned char *jpg, const unsigned long jpeg_size,
     const int width, const int height, std::vector<uint32_t> &img)
 {
   if (img.size() != width * height * 4) {

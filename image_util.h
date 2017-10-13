@@ -18,7 +18,7 @@ public:
    * The pointer will be valid for the image until the next time compress is
    * called, as the buffer will be re-used.
    */
-  const std::pair<unsigned char*, unsigned long> compress(const uint32_t *pixels,
+  const std::pair<unsigned char*, unsigned long> compress(uint32_t *pixels,
       int width, int height);
 };
 
@@ -32,7 +32,7 @@ public:
   /* Decompress an RGBA JPG image into the buffer passed. img may be resized
    * to ensure it has enough room.
    */
-  void decompress(const unsigned char *jpg, const unsigned long jpeg_size,
+  void decompress(unsigned char *jpg, const unsigned long jpeg_size,
     const int width, const int height, std::vector<uint32_t> &img);
 };
 

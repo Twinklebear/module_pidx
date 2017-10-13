@@ -83,7 +83,7 @@ ClientConnection::ClientConnection(const int port) : compressor(90) {
 
   client = ospcommon::listen(listen_socket);
 }
-void ClientConnection::send_frame(const uint32_t *img, int width, int height) {
+void ClientConnection::send_frame(uint32_t *img, int width, int height) {
   auto jpg = compressor.compress(img, width, height);
   ospcommon::write(client, &jpg.second, sizeof(jpg.second));
   ospcommon::write(client, jpg.first, jpg.second);
