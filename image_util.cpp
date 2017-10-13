@@ -15,11 +15,6 @@ JPGCompressor::~JPGCompressor() {
 const std::pair<unsigned char*, unsigned long> JPGCompressor::compress(const uint32_t *pixels,
     int width, int height)
 {
-  if (buffer) {
-    tjFree(buffer);
-    buffer = nullptr;
-    bufsize = 0;
-  }
   const int rc = tjCompress2(compressor, reinterpret_cast<const unsigned char*>(pixels),
       width, width * 4, height, TJPF_RGBA, &buffer, &bufsize, TJSAMP_420,
       quality, TJFLAG_BOTTOMUP);
