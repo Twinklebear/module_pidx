@@ -1,4 +1,5 @@
 #include <random>
+#include <memory>
 #include <algorithm>
 #include <array>
 #include <chrono>
@@ -17,6 +18,7 @@
 #include "util.h"
 #include "image_util.h"
 #include "pidx_volume.h"
+#include "client_server.h"
 
 using namespace ospcommon;
 using namespace ospray::cpp;
@@ -58,12 +60,9 @@ int main(int argc, char **argv) {
   const int rank = mpicommon::world.rank;
   const int worldSize = mpicommon::world.size;
 
-  socket_t listenSocket = nullptr;
-  socket_t client = nullptr;
+  std::unique_ptr<ClientConnection> client;
   if (rank == 0) {
-    listenSocket = bind(port);
-    std::cout << "Rank 0 now listening for client" << std::endl;
-    client = listen(listenSocket);
+    client = std::make_unique<ClientConnection>(port);
   }
 
   TransferFunction tfcn("piecewise_linear");
@@ -88,7 +87,6 @@ int main(int argc, char **argv) {
   }
 
   AppState app;
-  JPGCompressor compressor(90);
 
   Model model;
   PIDXVolume pidxVolume(datasetPath, tfcn, variableName, timestep);
@@ -145,14 +143,12 @@ int main(int argc, char **argv) {
         << "ms\n";
 
       uint32_t *img = (uint32_t*)fb.map(OSP_FB_COLOR);
-      auto jpg = compressor.compress(img, app.fbSize.x, app.fbSize.y);
-      ospcommon::write(client, &jpg.second, sizeof(jpg.second));
-      ospcommon::write(client, jpg.first, jpg.second);
-      ospcommon::flush(client);
+      client->send_frame(img, app.fbSize.x, app.fbSize.y);
       fb.unmap(img);
 
-      ospcommon::read(client, &app, sizeof(AppState));
+      client->recieve_app_state(app);
     }
+
     // Send out the shared app state that the workers need to know, e.g. camera
     // position, if we should be quitting.
     MPI_Bcast(&app, sizeof(AppState), MPI_BYTE, 0, MPI_COMM_WORLD);

@@ -1,3 +1,5 @@
+#include <iostream>
+#include <unistd.h>
 #include "client_server.h"
 
 ServerConnection::ServerConnection(const std::string &server, const int port,
@@ -50,5 +52,24 @@ void ServerConnection::connection_thread() {
       }
     }
   }
+}
+
+ClientConnection::ClientConnection(const int port) : compressor(90) {
+  listen_socket = ospcommon::bind(port);
+  char hostname[1024] = {0};
+  gethostname(hostname, 1023);
+  std::cout << "Now listening for client on "
+    << hostname << ":" << port << std::endl;
+
+  client = ospcommon::listen(listen_socket);
+}
+void ClientConnection::send_frame(const uint32_t *img, int width, int height) {
+  auto jpg = compressor.compress(img, width, height);
+  ospcommon::write(client, &jpg.second, sizeof(jpg.second));
+  ospcommon::write(client, jpg.first, jpg.second);
+  ospcommon::flush(client);
+}
+void ClientConnection::recieve_app_state(AppState &app) {
+  ospcommon::read(client, &app, sizeof(AppState));
 }
 

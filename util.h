@@ -52,7 +52,7 @@ std::array<int, 3> computeGhostFaces(const ospcommon::vec3i &brickId,
 struct UintahTimestep {
   size_t timestep;
   std::string path;
-  
+
   UintahTimestep(const size_t timestep, const std::string &path);
 };
 

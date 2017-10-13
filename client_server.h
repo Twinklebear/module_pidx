@@ -5,6 +5,7 @@
 #include <mutex>
 #include "ospcommon/networking/Socket.h"
 #include "util.h"
+#include "image_util.h"
 
 // A connection to the render worker server
 class ServerConnection {
@@ -35,4 +36,15 @@ private:
   void connection_thread();
 };
 
+// A client connecting to the render worker server
+class ClientConnection {
+  JPGCompressor compressor;
+
+  ospcommon::socket_t listen_socket, client;
+
+public:
+  ClientConnection(const int port);
+  void send_frame(const uint32_t *img, int width, int height);
+  void recieve_app_state(AppState &app);
+};
 
