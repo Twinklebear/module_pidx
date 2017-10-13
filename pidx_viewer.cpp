@@ -6,7 +6,6 @@
 #include <turbojpeg.h>
 #include <GLFW/glfw3.h>
 #include "ospray/ospray_cpp/TransferFunction.h"
-#include "ospcommon/networking/Socket.h"
 #include "ospcommon/utility/SaveImage.h"
 #include "widgets/transferFunction.h"
 #include "common/sg/transferFunction/TransferFunction.h"
@@ -15,6 +14,7 @@
 #include "arcball.h"
 #include "util.h"
 #include "image_util.h"
+#include "client_server.h"
 
 using namespace ospray::cpp;
 using namespace ospcommon;
@@ -104,16 +104,16 @@ void charCallback(GLFWwindow *window, unsigned int c) {
 }
 
 int main(int argc, char **argv) {
-  std::string server;
+  std::string serverhost;
   int port = -1;
   for (int i = 1; i < argc; ++i) {
     if (std::strcmp("-server", argv[i]) == 0) {
-      server = argv[++i];
+      serverhost = argv[++i];
     } else if (std::strcmp("-port", argv[i]) == 0) {
       port = std::atoi(argv[++i]);
     }
   }
-  if (server.empty() || port < 0) {
+  if (serverhost.empty() || port < 0) {
     throw std::runtime_error("Usage: ./pidx_viewer -server <server host> -port <port>");
   }
 
@@ -149,20 +149,17 @@ int main(int argc, char **argv) {
   glfwSetCharCallback(window, charCallback);
 
   JPGDecompressor decompressor;
-  socket_t renderServer = connect(server.c_str(), port);
+  ServerConnection server(serverhost, port, app);
 
   std::vector<uint32_t> imgBuf;
   std::vector<vec3f> tfcnColors;
   std::vector<float> tfcnAlphas;
   while (!app.quit) {
-    // Receive jpg from network
-    unsigned long jpgSize = 0;
-    ospcommon::read(renderServer, &jpgSize, sizeof(jpgSize));
-    jpgBuf.resize(jpgSize, 0);
-    ospcommon::read(renderServer, jpgBuf.data(), jpgSize);
-
     imgBuf.resize(app.fbSize.x * app.fbSize.y, 0);
-    decompressor.decompress(jpgBuf.data(), jpgSize, app.fbSize.x, app.fbSize.y, imgBuf);
+    if (server.get_new_frame(jpgBuf)) {
+      decompressor.decompress(jpgBuf.data(), jpgBuf.size(), app.fbSize.x,
+          app.fbSize.y, imgBuf);
+    }
 
     glClear(GL_COLOR_BUFFER_BIT);
     glDrawPixels(app.fbSize.x, app.fbSize.y, GL_RGBA, GL_UNSIGNED_BYTE, imgBuf.data());
@@ -207,8 +204,7 @@ int main(int argc, char **argv) {
     windowState->cameraChanged = false;
     windowState->isImGuiHovered = ImGui::IsMouseHoveringAnyWindow();
 
-    ospcommon::write(renderServer, &app, sizeof(AppState));
-    ospcommon::flush(renderServer);
+    server.update_app_state(app);
 
     if (app.fbSizeChanged) {
       app.fbSizeChanged = false;
