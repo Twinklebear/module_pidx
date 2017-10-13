@@ -88,19 +88,19 @@ int main(int argc, char **argv) {
 
   Model model;
   // We've got a set of timesteps instead of a single dataset
-  std::vector<UintahTimestep> uintahTimesteps;
-  size_t currentTimestep = 0;
+  std::set<UintahTimestep> uintahTimesteps;
+  std::set<UintahTimestep>::const_iterator currentTimestep;
   if (datasetPath.empty()) {
-    uintahTimesteps = collectUintahTimesteps(timestepDir);
-    std::cout << "Read " << uintahTimesteps.size() << " timestep dirs" << std::endl;
     // Follow the Uintah directory structure for PIDX to the CCVars.idx for
     // the timestep
-    datasetPath = uintahTimesteps[0].path;
+    uintahTimesteps = collectUintahTimesteps(timestepDir);
+    std::cout << "Read " << uintahTimesteps.size() << " timestep dirs" << std::endl;
+    currentTimestep = uintahTimesteps.cbegin();
+    datasetPath = currentTimestep->path;
     std::cout << "dataset for first timestep = " << datasetPath
-      << ", timestep = " << uintahTimesteps[0].timestep << std::endl;
-    currentTimestep = uintahTimesteps[0].timestep;
+      << ", timestep = " << currentTimestep->timestep << std::endl;
   }
-  PIDXVolume pidxVolume(datasetPath, tfcn, variableName, currentTimestep);
+  PIDXVolume pidxVolume(datasetPath, tfcn, variableName, currentTimestep->timestep);
   pidxVolume.volume.commit();
   // TODO: Update based on volume
   box3f worldBounds(vec3f(-64), vec3f(64));
@@ -142,15 +142,13 @@ int main(int argc, char **argv) {
 
     if (i != 0 && !uintahTimesteps.empty() && i % framesPerTimestep == 0) {
       std::cout << "Moving to next sim timestep" << std::endl;
-      const size_t nextTimestep = i / framesPerTimestep;
-      if (nextTimestep < uintahTimesteps.size()) {
-        const UintahTimestep &tstep = uintahTimesteps[nextTimestep];
-        datasetPath = tstep.path;
-        std::cout << "dataset for timestep " << nextTimestep << " = "
-          << datasetPath << std::endl;
+      if (std::distance(currentTimestep, uintahTimesteps.cend()) > 1) {
+        ++currentTimestep;
+        datasetPath = currentTimestep->path;
+        std::cout << "dataset for timestep  = " << datasetPath << std::endl;
 
         model.removeVolume(pidxVolume.volume);
-        pidxVolume = PIDXVolume(datasetPath, tfcn, variableName, tstep.timestep);
+        pidxVolume = PIDXVolume(datasetPath, tfcn, variableName, currentTimestep->timestep);
         pidxVolume.volume.commit();
         model.addVolume(pidxVolume.volume);
         model.commit();

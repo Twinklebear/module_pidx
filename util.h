@@ -1,6 +1,8 @@
 #pragma once
 
 #include <array>
+#include <set>
+#include <vector>
 #include "ospcommon/vec.h"
 #include "PIDX.h"
 
@@ -62,8 +64,9 @@ struct UintahTimestep {
 
   UintahTimestep(const size_t timestep, const std::string &path);
 };
+bool operator<(const UintahTimestep &a, const UintahTimestep &b);
 
-std::vector<UintahTimestep> collectUintahTimesteps(const std::string &dir);
+std::set<UintahTimestep> collectUintahTimesteps(const std::string &dir);
 
 std::string pidx_error_to_string(const PIDX_return_code rc);
 
