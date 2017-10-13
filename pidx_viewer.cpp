@@ -134,8 +134,8 @@ int main(int argc, char **argv) {
   glfwMakeContextCurrent(window);
 
   auto windowState = std::make_shared<WindowState>(app, arcballCamera);
-  //auto transferFcn = std::make_shared<ospray::sg::TransferFunction>();
-  //auto tfnWidget = std::make_shared<ospray::TransferFunction>(transferFcn);
+  auto transferFcn = std::make_shared<ospray::sg::TransferFunction>();
+  auto tfnWidget = std::make_shared<ospray::TransferFunction>(transferFcn);
 
   ImGui_ImplGlfwGL3_Init(window, false);
 
@@ -167,11 +167,11 @@ int main(int argc, char **argv) {
     glClear(GL_COLOR_BUFFER_BIT);
     glDrawPixels(app.fbSize.x, app.fbSize.y, GL_RGBA, GL_UNSIGNED_BYTE, imgBuf.data());
 
-    //const auto tfcnTimeStamp = transferFcn->childrenLastModified();
+    const auto tfcnTimeStamp = transferFcn->childrenLastModified();
 
     ImGui_ImplGlfwGL3_NewFrame();
 
-    //tfnWidget->drawUi();
+    tfnWidget->drawUi();
 
     ImGui::Render();
 
@@ -182,20 +182,20 @@ int main(int argc, char **argv) {
       app.quit = true;
     }
 
-    //tfnWidget->render();
+    tfnWidget->render();
 
-    /*
     if (transferFcn->childrenLastModified() != tfcnTimeStamp) {
       tfcnColors = transferFcn->child("colors").nodeAs<ospray::sg::DataVector3f>()->v;
       const auto &ospAlpha = transferFcn->child("alpha").nodeAs<ospray::sg::DataVector2f>()->v;
+      /*
       tfcnAlphas.clear();
       std::transform(ospAlpha.begin(), ospAlpha.end(), std::back_inserter(tfcnAlphas),
           [](const vec2f &a) {
             return a.y;
           });
       app.tfcnChanged = true;
+      */
     }
-    */
 
     const vec3f eye = windowState->camera.eyePos();
     const vec3f look = windowState->camera.lookDir();
