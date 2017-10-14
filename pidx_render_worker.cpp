@@ -131,7 +131,8 @@ int main(int argc, char **argv) {
   fb.clear(OSP_FB_COLOR | OSP_FB_ACCUM | OSP_FB_VARIANCE);
 
   if (rank == 0) {
-    client->send_metadata(std::vector<std::string>{"a", "b"}, std::set<UintahTimestep>{});
+    // TODO: Send over the current timestep and field we started with
+    client->send_metadata(pidxVolume.pidxVars, std::set<UintahTimestep>{});
   }
 
   mpicommon::world.barrier();
@@ -208,10 +209,16 @@ int main(int argc, char **argv) {
     }
     if (app.fieldChanged) {
       std::cout << "Got field change, to field #" << app.currentField << "\n";
+      pidxVolume.currentVariable = app.currentField;
+      pidxVolume.update();
+
+      fb.clear(OSP_FB_COLOR | OSP_FB_ACCUM | OSP_FB_VARIANCE);
       app.fieldChanged = false;
     }
     if (app.timestepChanged) {
       std::cout << "Got timestep change, to time #" << app.currentTimestep << "\n";
+
+      fb.clear(OSP_FB_COLOR | OSP_FB_ACCUM | OSP_FB_VARIANCE);
       app.timestepChanged = false;
     }
   }
