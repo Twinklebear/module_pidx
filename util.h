@@ -13,7 +13,10 @@ struct AppState {
   // eye pos, look dir, up dir
   std::array<ospcommon::vec3f, 3> v;
   ospcommon::vec2i fbSize;
-  bool cameraChanged, quit, fbSizeChanged, tfcnChanged;
+  int currentField;
+  int currentTimestep;
+  bool cameraChanged, quit, fbSizeChanged,
+       tfcnChanged, timestepChanged, fieldChanged;
 
   AppState();
 };

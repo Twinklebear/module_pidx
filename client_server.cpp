@@ -16,13 +16,15 @@ ServerConnection::~ServerConnection() {
   }
   server_thread.join();
 }
-void ServerConnection::get_metadata(std::vector<std::string> &vars,
+bool ServerConnection::get_metadata(std::vector<std::string> &vars,
     std::vector<size_t> &times)
 {
   if (have_metadata) {
     vars = variables;
     times = timesteps;
+    return true;
   }
+  return false;
 }
 bool ServerConnection::get_new_frame(std::vector<unsigned char> &buf) {
   std::lock_guard<std::mutex> lock(frame_mutex);
@@ -37,9 +39,13 @@ void ServerConnection::update_app_state(const AppState &state, const AppData &da
   std::lock_guard<std::mutex> lock(state_mutex);
   app_state.v = state.v;
   app_state.fbSize = state.fbSize;
+  app_state.currentField = state.currentField;
+  app_state.currentTimestep = state.currentTimestep;
   app_state.cameraChanged = state.cameraChanged ? state.cameraChanged : app_state.cameraChanged;
   app_state.fbSizeChanged = state.fbSizeChanged ? state.fbSizeChanged : app_state.fbSizeChanged;
   app_state.tfcnChanged = state.tfcnChanged ? state.tfcnChanged : app_state.tfcnChanged;
+  app_state.timestepChanged = state.timestepChanged ? state.timestepChanged : app_state.timestepChanged;
+  app_state.fieldChanged = state.fieldChanged ? state.fieldChanged : app_state.fieldChanged;
 
   app_data = data;
 }
@@ -91,6 +97,8 @@ void ServerConnection::connection_thread() {
       app_state.tfcnChanged = false;
       app_state.cameraChanged = false;
       app_state.fbSizeChanged = false;
+      app_state.timestepChanged = false;
+      app_state.fieldChanged = false;
     }
   }
 }

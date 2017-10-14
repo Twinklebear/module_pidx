@@ -174,13 +174,12 @@ int main(int argc, char **argv) {
 
     if (ImGui::Begin("Volume Info")) {
       if (!timesteps.empty()) {
-        int t = 0;
-        ImGui::SliderInt("Timestep", &t, 0, timesteps.size());
-        ImGui::Text("Current Timestep %lu", timesteps[t]);
+        app.timestepChanged = ImGui::SliderInt("Timestep",
+            &app.currentTimestep, 0, timesteps.size());
+        ImGui::Text("Current Timestep %lu", timesteps[app.currentTimestep]);
       }
       if (!variables.empty()) {
-        int current_var = 0;
-        ImGui::ListBox("Variable", &current_var,
+        app.fieldChanged = ImGui::ListBox("Variable", &app.currentField,
             [](void *v, int i, const char **out) {
               auto *list = reinterpret_cast<std::vector<std::string>*>(v);
               *out = (*list)[i].c_str();
@@ -190,7 +189,10 @@ int main(int argc, char **argv) {
       }
       if (variables.empty() && timesteps.empty()) {
         ImGui::Text("Waiting for server to load data");
-        server.get_metadata(variables, timesteps);
+        if (server.get_metadata(variables, timesteps)) {
+          app.currentField = 0;
+          app.currentTimestep = 0;
+        }
       }
     }
     ImGui::End();

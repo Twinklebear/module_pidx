@@ -206,6 +206,14 @@ int main(int argc, char **argv) {
       fb.clear(OSP_FB_COLOR | OSP_FB_ACCUM | OSP_FB_VARIANCE);
       app.tfcnChanged = false;
     }
+    if (app.fieldChanged) {
+      std::cout << "Got field change, to field #" << app.currentField << "\n";
+      app.fieldChanged = false;
+    }
+    if (app.timestepChanged) {
+      std::cout << "Got timestep change, to time #" << app.currentTimestep << "\n";
+      app.timestepChanged = false;
+    }
   }
 
   MPI_Finalize();

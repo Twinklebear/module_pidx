@@ -31,7 +31,11 @@ public:
   ServerConnection(const std::string &server, const int port,
       const AppState &app_state);
   ~ServerConnection();
-  void get_metadata(std::vector<std::string> &vars,
+  /* Check if we've gotten metadata back from the server, returns true
+   * if we have, in which case the vectors will contain the corresponding
+   * meta data returned.
+   */
+  bool get_metadata(std::vector<std::string> &vars,
       std::vector<size_t> &timesteps);
   /* Get the new JPG recieved from the network, if we've got a new one,
    * otherwise the buf is unchanged.

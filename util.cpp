@@ -11,7 +11,8 @@
 using namespace ospcommon;
 
 AppState::AppState() : fbSize(1024), cameraChanged(false), quit(false),
-  fbSizeChanged(false), tfcnChanged(false)
+  fbSizeChanged(false), tfcnChanged(false), timestepChanged(false),
+  fieldChanged(false)
 {}
 
 bool computeDivisor(int x, int &divisor) {
