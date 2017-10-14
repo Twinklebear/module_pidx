@@ -209,6 +209,8 @@ int main(int argc, char **argv) {
     }
     if (app.fieldChanged) {
       std::cout << "Got field change, to field #" << app.currentField << "\n";
+      // TODO: We need to recreate the volume, otherwise ospray doesn't re-build the
+      // grid accelerator and we get artifacts in the bricking
       pidxVolume.currentVariable = app.currentField;
       pidxVolume.update();
 
