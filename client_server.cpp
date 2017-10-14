@@ -4,7 +4,8 @@
 
 ServerConnection::ServerConnection(const std::string &server, const int port,
     const AppState &app_state)
-  : server_host(server), server_port(port), new_frame(false), app_state(app_state)
+  : server_host(server), server_port(port), new_frame(false), app_state(app_state),
+  have_metadata(false)
 {
   server_thread = std::thread([&](){ connection_thread(); });
 }
@@ -14,6 +15,14 @@ ServerConnection::~ServerConnection() {
     app_state.quit = true;
   }
   server_thread.join();
+}
+void ServerConnection::get_metadata(std::vector<std::string> &vars,
+    std::vector<size_t> &times)
+{
+  if (have_metadata) {
+    vars = variables;
+    times = timesteps;
+  }
 }
 bool ServerConnection::get_new_frame(std::vector<unsigned char> &buf) {
   std::lock_guard<std::mutex> lock(frame_mutex);
@@ -36,6 +45,18 @@ void ServerConnection::update_app_state(const AppState &state, const AppData &da
 }
 void ServerConnection::connection_thread() {
   ospcommon::socket_t render_server = ospcommon::connect(server_host.c_str(), server_port);
+  // Receive metadata from the server
+  size_t size = 0;
+  ospcommon::read(render_server, &size, sizeof(size_t));
+  for (size_t i = 0; i < size; ++i) {
+    variables.push_back(ospcommon::read_string(render_server));
+  }
+
+  ospcommon::read(render_server, &size, sizeof(size_t));
+  timesteps.resize(size, 0);
+  ospcommon::read(render_server, timesteps.data(), timesteps.size() * sizeof(size_t));
+  have_metadata = true;
+
   while (true) {
     // Receive a frame from the server
     {
@@ -82,6 +103,24 @@ ClientConnection::ClientConnection(const int port) : compressor(90) {
     << hostname << ":" << port << std::endl;
 
   client = ospcommon::listen(listen_socket);
+}
+void ClientConnection::send_metadata(const std::vector<std::string> &vars,
+    const std::set<UintahTimestep> &timesteps)
+{
+  size_t size = vars.size();
+  ospcommon::write(client, &size, sizeof(size));
+  for (const auto &v : vars) {
+    ospcommon::write(client, v);
+  }
+
+  std::vector<size_t> times;
+  for (const auto &t : timesteps) {
+    times.push_back(t.timestep);
+  }
+  size = times.size();
+  ospcommon::write(client, &size, sizeof(size));
+  ospcommon::write(client, times.data(), sizeof(size_t) * times.size());
+  ospcommon::flush(client);
 }
 void ClientConnection::send_frame(uint32_t *img, int width, int height) {
   auto jpg = compressor.compress(img, width, height);

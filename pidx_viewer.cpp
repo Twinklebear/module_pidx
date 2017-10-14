@@ -152,6 +152,9 @@ int main(int argc, char **argv) {
   JPGDecompressor decompressor;
   ServerConnection server(serverhost, port, app);
 
+  std::vector<std::string> variables;
+  std::vector<size_t> timesteps;
+
   std::vector<uint32_t> imgBuf;
   while (!app.quit) {
     imgBuf.resize(app.fbSize.x * app.fbSize.y, 0);
@@ -168,6 +171,29 @@ int main(int argc, char **argv) {
     ImGui_ImplGlfwGL3_NewFrame();
 
     tfnWidget->drawUi();
+
+    if (ImGui::Begin("Volume Info")) {
+      if (!timesteps.empty()) {
+        int t = 0;
+        ImGui::SliderInt("Timestep", &t, 0, timesteps.size());
+        ImGui::Text("Current Timestep %lu", timesteps[t]);
+      }
+      if (!variables.empty()) {
+        int current_var = 0;
+        ImGui::ListBox("Variable", &current_var,
+            [](void *v, int i, const char **out) {
+              auto *list = reinterpret_cast<std::vector<std::string>*>(v);
+              *out = (*list)[i].c_str();
+              return true;
+            },
+            &variables, variables.size());
+      }
+      if (variables.empty() && timesteps.empty()) {
+        ImGui::Text("Waiting for server to load data");
+        server.get_metadata(variables, timesteps);
+      }
+    }
+    ImGui::End();
 
     ImGui::Render();
 

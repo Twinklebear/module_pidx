@@ -1,7 +1,9 @@
 #pragma once
 
 #include <vector>
+#include <atomic>
 #include <thread>
+#include <set>
 #include <mutex>
 #include "ospcommon/networking/Socket.h"
 #include "util.h"
@@ -21,11 +23,16 @@ class ServerConnection {
   std::mutex state_mutex;
 
   std::thread server_thread;
+  std::vector<std::string> variables;
+  std::vector<size_t> timesteps;
+  std::atomic<bool> have_metadata;
 
 public:
   ServerConnection(const std::string &server, const int port,
       const AppState &app_state);
   ~ServerConnection();
+  void get_metadata(std::vector<std::string> &vars,
+      std::vector<size_t> &timesteps);
   /* Get the new JPG recieved from the network, if we've got a new one,
    * otherwise the buf is unchanged.
    */
@@ -45,6 +52,8 @@ class ClientConnection {
 
 public:
   ClientConnection(const int port);
+  void send_metadata(const std::vector<std::string> &vars,
+      const std::set<UintahTimestep> &timesteps);
   void send_frame(uint32_t *img, int width, int height);
   void recieve_app_state(AppState &app, AppData &data);
 };

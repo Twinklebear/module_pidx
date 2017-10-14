@@ -32,6 +32,7 @@ int main(int argc, char **argv) {
   MPI_Init_thread(&argc, &argv, MPI_THREAD_SINGLE, &provided);
 
   std::string datasetPath;
+  std::vector<std::string> timestepDirs;
   size_t timestep = 0;
   std::string variableName;
   for (int i = 1; i < argc; ++i) {
@@ -43,12 +44,24 @@ int main(int argc, char **argv) {
       timestep = std::atoll(argv[++i]);
     } else if (std::strcmp("-variable", argv[i]) == 0) {
       variableName = std::string(argv[++i]);
+    } else if (std::strcmp("-timestep-dirs", argv[i]) == 0) {
+      for (; i + 1 < argc; ++i) {
+        if (argv[i + 1][0] == '-') {
+          break;
+        }
+        timestepDirs.push_back(argv[i + 1]);
+      }
     }
-
   }
-  if (datasetPath.empty()) {
-    throw std::runtime_error("Usage: mpirun -np <N> ./pidx_render_worker"
-        " -dataset <dataset.idx> -port <port> -timestep <timestep> -variable <variable>");
+  if (datasetPath.empty() && timestepDirs.empty()) {
+    std::cout << "Usage: mpirun -np <N> ./pidx_render_worker [options]\n"
+      << "Options:\n"
+      << "-dataset <dataset.idx>\n"
+      << "-timesteps [list of timestep dirs]\n"
+      << "-port <port>\n"
+      << "-timestep <timestep>\n"
+      << "-variable <variable>";
+    return 1;
   }
 
   ospLoadModule("mpi");
@@ -116,6 +129,10 @@ int main(int argc, char **argv) {
 
   FrameBuffer fb(app.fbSize, OSP_FB_SRGBA, OSP_FB_COLOR | OSP_FB_ACCUM | OSP_FB_VARIANCE);
   fb.clear(OSP_FB_COLOR | OSP_FB_ACCUM | OSP_FB_VARIANCE);
+
+  if (rank == 0) {
+    client->send_metadata(std::vector<std::string>{"a", "b"}, std::set<UintahTimestep>{});
+  }
 
   mpicommon::world.barrier();
 
