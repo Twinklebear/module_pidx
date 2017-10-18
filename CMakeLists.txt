@@ -41,7 +41,7 @@ if (OSPRAY_MODULE_PIDX)
     message(FATAL_ERROR "TurboJPEG is not found.")
   endif(NOT TURBOJPEG_INCLUDE_DIR)
 
-  include_directories(${GLFW_INCLUDE_DIR}
+  include_directories(
     ${MPI_CXX_INCLUDE_PATH}
     ${PIDX_INCLUDE_DIRS}
     ${TURBOJPEG_INCLUDE_DIR})
