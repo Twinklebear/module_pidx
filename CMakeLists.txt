@@ -11,6 +11,11 @@ if (OSPRAY_MODULE_PIDX)
   find_package(PIDX REQUIRED)
   find_package(MPI REQUIRED)
 
+  # the latest PIDX requires zfp package
+  # so I am adding the additional link target here 
+  # TODO: we need a way to compile with old PIDX
+  set(PIDX_LIBS ${PIDX_LIBRARIES} zfp)
+
   # find libjpeg-turbo
   find_path(TURBOJPEG_INCLUDE_DIR
     NAMES turbojpeg.h
@@ -59,7 +64,7 @@ if (OSPRAY_MODULE_PIDX)
     ospray_common
     ospray_mpi_common
     ospray
-    ${PIDX_LIBRARIES}
+    ${PIDX_LIBS}
     ${MPI_CXX_LIBRARIES}
     ${TURBOJPEG_LIBRARY}
     )
@@ -72,7 +77,7 @@ if (OSPRAY_MODULE_PIDX)
     ospray_common
     ospray_mpi_common
     ospray
-    ${PIDX_LIBRARIES}
+    ${PIDX_LIBS}
     ${MPI_CXX_LIBRARIES}
     ${TURBOJPEG_LIBRARY}
     )
@@ -85,7 +90,7 @@ if (OSPRAY_MODULE_PIDX)
     ospray_common
     ospray_mpi_common
     ospray
-    ${PIDX_LIBRARIES}
+    ${PIDX_LIBS}
     ${MPI_CXX_LIBRARIES}
     ${TURBOJPEG_LIBRARY}
     )
@@ -98,7 +103,7 @@ if (OSPRAY_MODULE_PIDX)
       pidx_app_util
       ${OPENGL_LIBRARIES}
       ${GLFW_LIBRARY}
-      imgui
+      ospray_imgui
       ospray
       ospray_common
       ospray_imgui3d_sg
