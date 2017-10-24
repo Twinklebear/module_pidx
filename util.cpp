@@ -11,7 +11,8 @@
 using namespace ospcommon;
 
 AppState::AppState() : fbSize(1024), cameraChanged(false), quit(false),
-  fbSizeChanged(false), tfcnChanged(false)
+  fbSizeChanged(false), tfcnChanged(false), timestepChanged(false),
+  fieldChanged(false)
 {}
 
 bool computeDivisor(int x, int &divisor) {
@@ -55,21 +56,24 @@ std::array<int, 3> computeGhostFaces(const vec3i &brickId, const vec3i &grid) {
 UintahTimestep::UintahTimestep(const size_t timestep, const std::string &path)
   : timestep(timestep), path(path)
 {}
+bool operator<(const UintahTimestep &a, const UintahTimestep &b) {
+  return a.timestep < b.timestep;
+}
 
-std::vector<UintahTimestep> collectUintahTimesteps(const std::string &dir) {
+std::set<UintahTimestep> collectUintahTimesteps(const std::string &dir) {
   DIR *dp = opendir(dir.c_str());
   if (!dp) {
     throw std::runtime_error("failed to open directory: " + dir);
   }
 
-  std::vector<UintahTimestep> timesteps;
+  std::set<UintahTimestep> timesteps;
   for (dirent *e = readdir(dp); e; e = readdir(dp)) {
     const std::string idxFile = dir + "/" + std::string(e->d_name) + "/l0/CCVars.idx";
     struct stat fileStat = {0};
     if (stat(idxFile.c_str(), &fileStat) == 0) {
       // The timestep files are in the pattern t######, so take out the t
       const std::string fname = e->d_name + 1;
-      timesteps.emplace_back(size_t(std::stoull(e->d_name + 1)), idxFile);
+      timesteps.emplace(size_t(std::stoull(e->d_name + 1)), idxFile);
     }
   }
   return timesteps;

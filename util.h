@@ -1,6 +1,8 @@
 #pragma once
 
 #include <array>
+#include <set>
+#include <vector>
 #include "ospcommon/vec.h"
 #include "PIDX.h"
 
@@ -11,9 +13,19 @@ struct AppState {
   // eye pos, look dir, up dir
   std::array<ospcommon::vec3f, 3> v;
   ospcommon::vec2i fbSize;
-  bool cameraChanged, quit, fbSizeChanged, tfcnChanged;
+  int currentField;
+  int currentTimestep;
+  bool cameraChanged, quit, fbSizeChanged,
+       tfcnChanged, timestepChanged, fieldChanged;
 
   AppState();
+};
+
+// Struct for holding the other app data buffers and info that
+// we can't bcast directly.
+struct AppData {
+  std::vector<ospcommon::vec3f> tfcn_colors;
+  std::vector<float> tfcn_alphas;
 };
 
 // Some of these utils for computing the gridding and ghost region
@@ -52,11 +64,12 @@ std::array<int, 3> computeGhostFaces(const ospcommon::vec3i &brickId,
 struct UintahTimestep {
   size_t timestep;
   std::string path;
-  
+
   UintahTimestep(const size_t timestep, const std::string &path);
 };
+bool operator<(const UintahTimestep &a, const UintahTimestep &b);
 
-std::vector<UintahTimestep> collectUintahTimesteps(const std::string &dir);
+std::set<UintahTimestep> collectUintahTimesteps(const std::string &dir);
 
 std::string pidx_error_to_string(const PIDX_return_code rc);
 

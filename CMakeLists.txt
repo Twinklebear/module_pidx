@@ -53,11 +53,12 @@ if (OSPRAY_MODULE_PIDX)
 
   include_directories(${CMAKE_SOURCE_DIR}/apps/common
     ${CMAKE_SOURCE_DIR}/apps/exampleViewer)
-    
+
   add_library(pidx_app_util
     pidx_volume.cpp
     util.cpp
     image_util.cpp
+    client_server.cpp
     )
   target_link_libraries(pidx_app_util PUBLIC
     ospray

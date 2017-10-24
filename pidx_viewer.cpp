@@ -6,7 +6,6 @@
 #include <turbojpeg.h>
 #include <GLFW/glfw3.h>
 #include "ospray/ospray_cpp/TransferFunction.h"
-#include "ospcommon/networking/Socket.h"
 #include "ospcommon/utility/SaveImage.h"
 #include "widgets/transferFunction.h"
 #include "common/sg/transferFunction/TransferFunction.h"
@@ -15,12 +14,12 @@
 #include "arcball.h"
 #include "util.h"
 #include "image_util.h"
+#include "client_server.h"
 
 using namespace ospray::cpp;
 using namespace ospcommon;
 
-const uint32_t* imgBufData = nullptr;
-vec2i           imgBufSize;
+std::vector<unsigned char> jpgBuf;
 
 // Extra stuff we need in GLFW callbacks
 struct WindowState {
@@ -45,9 +44,12 @@ void keyCallback(GLFWwindow *window, int key, int scancode, int action, int mods
         break;
       case 'P':
       case 'p':
-	if (imgBufData)
-	  utility::writePPM("screenshot.ppm",imgBufSize.x,imgBufSize.y, imgBufData);
-	break;
+        if (!jpgBuf.empty()) {
+          std::ofstream fout("screenshot.jpg", std::ios::binary);
+          fout.write(reinterpret_cast<const char*>(jpgBuf.data()), jpgBuf.size());
+          std::cout << "Screenshot saved to 'screenshot.jpg'\n";
+        }
+        break;
       default:
         break;
     }
@@ -102,20 +104,21 @@ void charCallback(GLFWwindow *window, unsigned int c) {
 }
 
 int main(int argc, char **argv) {
-  std::string server;
+  std::string serverhost;
   int port = -1;
   for (int i = 1; i < argc; ++i) {
     if (std::strcmp("-server", argv[i]) == 0) {
-      server = argv[++i];
+      serverhost = argv[++i];
     } else if (std::strcmp("-port", argv[i]) == 0) {
       port = std::atoi(argv[++i]);
     }
   }
-  if (server.empty() || port < 0) {
+  if (serverhost.empty() || port < 0) {
     throw std::runtime_error("Usage: ./pidx_viewer -server <server host> -port <port>");
   }
 
   AppState app;
+  AppData appdata;
   // TODO: Update based on volume?
   box3f worldBounds(vec3f(-64), vec3f(64));
   Arcball arcballCamera(worldBounds);
@@ -132,8 +135,8 @@ int main(int argc, char **argv) {
   glfwMakeContextCurrent(window);
 
   auto windowState = std::make_shared<WindowState>(app, arcballCamera);
-  //auto transferFcn = std::make_shared<ospray::sg::TransferFunction>();
-  //auto tfnWidget = std::make_shared<ospray::TransferFunction>(transferFcn);
+  auto transferFcn = std::make_shared<ospray::sg::TransferFunction>();
+  auto tfnWidget = std::make_shared<ospray::TransferFunction>(transferFcn);
 
   ImGui_ImplGlfwGL3_Init(window, false);
 
@@ -146,35 +149,53 @@ int main(int argc, char **argv) {
   glfwSetScrollCallback(window, ImGui_ImplGlfwGL3_ScrollCallback);
   glfwSetCharCallback(window, charCallback);
 
-  tjhandle decompressor = tjInitDecompress();
-  socket_t renderServer = connect(server.c_str(), port);
+  JPGDecompressor decompressor;
+  ServerConnection server(serverhost, port, app);
 
-  std::vector<vec3f> tfcnColors;
-  std::vector<float> tfcnAlphas;
+  std::vector<std::string> variables;
+  std::vector<size_t> timesteps;
+
+  std::vector<uint32_t> imgBuf;
   while (!app.quit) {
-    // Receive frame from network
-    /*
-    int imgBytes = ospcommon::read_int(renderServer);
-    std::vector<char> jpgBuf(imgBytes, 0);
-    ospcommon::read(renderServer, jpgBuf.data(), imgBytes);
-
-    std::vector<char> imgBuf(sizeof(uint32_t) * app.fbSize.x, app.fbSize.y, 0);
-    tjDecompress2(decompressor, jpgBuf.data(), imgBytes, imgBuf.data(),
-        app.fbSize.x, width * 4, app.fbSize.y, TJPF_RGBA, 0);
-    */
-    std::vector<char> imgBuf(sizeof(uint32_t) * app.fbSize.x * app.fbSize.y, 0);
-    ospcommon::read(renderServer, imgBuf.data(), imgBuf.size());
-    imgBufData = (uint32_t*) imgBuf.data();
-    imgBufSize = app.fbSize;
+    imgBuf.resize(app.fbSize.x * app.fbSize.y, 0);
+    if (server.get_new_frame(jpgBuf)) {
+      decompressor.decompress(jpgBuf.data(), jpgBuf.size(), app.fbSize.x,
+          app.fbSize.y, imgBuf);
+    }
 
     glClear(GL_COLOR_BUFFER_BIT);
     glDrawPixels(app.fbSize.x, app.fbSize.y, GL_RGBA, GL_UNSIGNED_BYTE, imgBuf.data());
 
-    //const auto tfcnTimeStamp = transferFcn->childrenLastModified();
+    const auto tfcnTimeStamp = transferFcn->childrenLastModified();
 
     ImGui_ImplGlfwGL3_NewFrame();
 
-    //tfnWidget->drawUi();
+    tfnWidget->drawUi();
+
+    if (ImGui::Begin("Volume Info")) {
+      if (!timesteps.empty()) {
+        app.timestepChanged = ImGui::SliderInt("Timestep",
+            &app.currentTimestep, 0, timesteps.size());
+        ImGui::Text("Current Timestep %lu", timesteps[app.currentTimestep]);
+      }
+      if (!variables.empty()) {
+        app.fieldChanged = ImGui::ListBox("Variable", &app.currentField,
+            [](void *v, int i, const char **out) {
+              auto *list = reinterpret_cast<std::vector<std::string>*>(v);
+              *out = (*list)[i].c_str();
+              return true;
+            },
+            &variables, variables.size());
+      }
+      if (variables.empty() && timesteps.empty()) {
+        ImGui::Text("Waiting for server to load data");
+        if (server.get_metadata(variables, timesteps)) {
+          app.currentField = 0;
+          app.currentTimestep = 0;
+        }
+      }
+    }
+    ImGui::End();
 
     ImGui::Render();
 
@@ -185,20 +206,18 @@ int main(int argc, char **argv) {
       app.quit = true;
     }
 
-    //tfnWidget->render();
+    tfnWidget->render();
 
-    /*
     if (transferFcn->childrenLastModified() != tfcnTimeStamp) {
-      tfcnColors = transferFcn->child("colors").nodeAs<ospray::sg::DataVector3f>()->v;
+      appdata.tfcn_colors = transferFcn->child("colors").nodeAs<ospray::sg::DataVector3f>()->v;
       const auto &ospAlpha = transferFcn->child("alpha").nodeAs<ospray::sg::DataVector2f>()->v;
-      tfcnAlphas.clear();
-      std::transform(ospAlpha.begin(), ospAlpha.end(), std::back_inserter(tfcnAlphas),
+      appdata.tfcn_alphas.clear();
+      std::transform(ospAlpha.begin(), ospAlpha.end(), std::back_inserter(appdata.tfcn_alphas),
           [](const vec2f &a) {
             return a.y;
           });
       app.tfcnChanged = true;
     }
-    */
 
     const vec3f eye = windowState->camera.eyePos();
     const vec3f look = windowState->camera.lookDir();
@@ -210,16 +229,15 @@ int main(int argc, char **argv) {
     windowState->cameraChanged = false;
     windowState->isImGuiHovered = ImGui::IsMouseHoveringAnyWindow();
 
-    ospcommon::write(renderServer, &app, sizeof(AppState));
-    ospcommon::flush(renderServer);
+    server.update_app_state(app, appdata);
 
     if (app.fbSizeChanged) {
       app.fbSizeChanged = false;
       glViewport(0, 0, app.fbSize.x, app.fbSize.y);
     }
+    app.tfcnChanged = false;
   }
 
-  tjDestroy(decompressor);
   ImGui_ImplGlfwGL3_Shutdown();
   glfwDestroyWindow(window);
 
