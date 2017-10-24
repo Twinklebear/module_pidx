@@ -1,6 +1,7 @@
 #include <string>
 #include <iostream>
 #include <fstream>
+#include <stdexcept>
 #include "image_util.h"
 
 JPGCompressor::JPGCompressor(int quality)
