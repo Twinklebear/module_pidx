@@ -75,7 +75,7 @@ int main(int argc, char **argv) {
 
   std::unique_ptr<ClientConnection> client;
   if (rank == 0) {
-    client = std::make_unique<ClientConnection>(port);
+    client = ospcommon::make_unique<ClientConnection>(port);
   }
 
   TransferFunction tfcn("piecewise_linear");
