@@ -1,5 +1,6 @@
 #include <string>
 #include <iostream>
+#include <stdexcept>
 #include <fstream>
 #include "image_util.h"
 
