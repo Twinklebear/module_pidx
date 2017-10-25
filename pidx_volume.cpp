@@ -22,7 +22,7 @@ PIDXVolume::~PIDXVolume() {
   // we need it around longer than an individual volume.
   PIDX_close_access(pidxAccess);
   volume.release();
-  transferFunction.release();
+  //transferFunction.release();
 }
 void PIDXVolume::update() {
   const int rank = mpicommon::world.rank;
@@ -115,8 +115,8 @@ void PIDXVolume::update() {
   PIDX_CHECK(PIDX_close(pidxFile));
   auto endLoad = high_resolution_clock::now();
 
-  // std::cout << "Rank " << rank << " load time: "
-  //           << duration_cast<milliseconds>(endLoad - startLoad).count() << "\n";
+  std::cout << "Rank " << rank << " load time: "
+    << duration_cast<milliseconds>(endLoad - startLoad).count() << "ms\n";
 
   auto minmax = std::minmax_element(reinterpret_cast<float*>(data.data()),
       reinterpret_cast<float*>(data.data()) + nLocalVals);
@@ -128,12 +128,13 @@ void PIDXVolume::update() {
       MPI_MIN, MPI_COMM_WORLD);
   MPI_Allreduce(&localValueRange.y, &valueRange.y, 1, MPI_FLOAT,
       MPI_MAX, MPI_COMM_WORLD);
+  valueRange = vec2f(0.0, 0.15);
+  transferFunction.set("valueRange", valueRange);
+  transferFunction.commit();
+
   if (rank == 0) {
     std::cout << "Value range = " << valueRange << "\n";
   }
-  //valueRange = vec2f(0.0, 0.15);
-  transferFunction.set("valueRange", valueRange);
-  transferFunction.commit();
 
   volume.set("transferFunction", transferFunction);
   // TODO: Parse the IDX type name into the OSPRay type name

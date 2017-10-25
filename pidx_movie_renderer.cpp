@@ -149,8 +149,11 @@ int main(int argc, char **argv) {
 
         model.removeVolume(pidxVolume.volume);
         pidxVolume = PIDXVolume(datasetPath, tfcn, variableName, currentTimestep->timestep);
-        pidxVolume.volume.commit();
+        //std::cout << "rank " << rank << Committing volume" << std::endl;
+        //pidxVolume.volume.commit();
+        std::cout << "rank " << rank << " Adding volume" << std::endl;
         model.addVolume(pidxVolume.volume);
+        std::cout << "rank " << rank << " commiting model" << std::endl;
         model.commit();
       }
     }

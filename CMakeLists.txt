@@ -92,6 +92,8 @@ if (OSPRAY_MODULE_PIDX)
     )
 
   if (OSPRAY_MODULE_PIDX_VIEWER)
+    find_package(GLFW)
+    include_directories(${GLFW_INCLUDE_DIRS})
     ospray_create_application(pidx_viewer
       pidx_viewer.cpp
       arcball.cpp
