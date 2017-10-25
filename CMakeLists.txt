@@ -6,10 +6,15 @@ option(OSPRAY_MODULE_PIDX_VIEWER "PIDX remote viewer client" OFF)
 
 if (OSPRAY_MODULE_PIDX)
 
-  set(CMAKE_CXX_STANDARD 14)
+  set(CMAKE_CXX_STANDARD 11)
   set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
   find_package(PIDX REQUIRED)
   find_package(MPI REQUIRED)
+
+  # the latest PIDX requires zfp package
+  # so I am adding the additional link target here 
+  # TODO: we need a way to compile with old PIDX
+  set(PIDX_LIBS ${PIDX_LIBRARIES} zfp)
 
   # find libjpeg-turbo
   find_path(TURBOJPEG_INCLUDE_DIR
@@ -60,7 +65,7 @@ if (OSPRAY_MODULE_PIDX)
     ospray_common
     ospray_mpi_common
     ospray
-    ${PIDX_LIBRARIES}
+    ${PIDX_LIBS}
     ${MPI_CXX_LIBRARIES}
     ${TURBOJPEG_LIBRARY}
     )
@@ -73,7 +78,7 @@ if (OSPRAY_MODULE_PIDX)
     ospray_common
     ospray_mpi_common
     ospray
-    ${PIDX_LIBRARIES}
+    ${PIDX_LIBS}
     ${MPI_CXX_LIBRARIES}
     ${TURBOJPEG_LIBRARY}
     )
@@ -86,7 +91,7 @@ if (OSPRAY_MODULE_PIDX)
     ospray_common
     ospray_mpi_common
     ospray
-    ${PIDX_LIBRARIES}
+    ${PIDX_LIBS}
     ${MPI_CXX_LIBRARIES}
     ${TURBOJPEG_LIBRARY}
     )
