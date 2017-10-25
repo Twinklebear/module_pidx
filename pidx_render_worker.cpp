@@ -23,11 +23,6 @@
 using namespace ospcommon;
 using namespace ospray::cpp;
 
-template<typename T, typename... Args>
-std::unique_ptr<T> make_unique(Args&&... args) {
-  return std::unique_ptr<T>(new T(std::forward<Args>(args)...));
-}
-
 int main(int argc, char **argv) {
   int provided = 0;
   int port = -1;
@@ -80,7 +75,7 @@ int main(int argc, char **argv) {
 
   std::unique_ptr<ClientConnection> client;
   if (rank == 0) {
-    client = std::unique_ptr<ClientConnection>(new ClientConnection(port));
+    client = std::make_unique<ClientConnection>(port);
   }
 
   TransferFunction tfcn("piecewise_linear");
