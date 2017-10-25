@@ -48,10 +48,12 @@ IF (PIDX_INCLUDE_DIR)
   SET(PIDX_INCLUDE_DIRS "${PIDX_INCLUDE_DIR}")
 
   FIND_LIBRARY(PIDX_LIBRARY     pidx    PATHS ${PIDX_DIR}/lib NO_DEFAULT_PATH)
+  FIND_LIBRARY(ZFP_LIBRARY      zfp     PATHS ${PIDX_DIR}/lib NO_DEFAULT_PATH)
   FIND_LIBRARY(HDF5_LIBRARY     pidx    )
 
   SET(PIDX_LIBRARIES 
     ${PIDX_LIBRARY}
+    ${ZFP_LIBRARY}
     ${PIDX_MPI_LIBS}
     )
 
@@ -75,4 +77,4 @@ ELSE ()
     MESSAGE("WARNING: PIDX library not found. Try setting PIDX_DIR")
   ENDIF()
 ENDIF ()
-                         
+
