@@ -100,15 +100,16 @@ int main(int argc, char **argv) {
     std::cout << "dataset for first timestep = " << datasetPath
       << ", timestep = " << currentTimestep->timestep << std::endl;
   }
-  PIDXVolume pidxVolume(datasetPath, tfcn, variableName, currentTimestep->timestep);
-  pidxVolume.volume.commit();
+  auto pidxVolume = std::make_shared<PIDXVolume>(datasetPath, tfcn,
+      variableName, currentTimestep->timestep);
+  pidxVolume->volume.commit();
   // TODO: Update based on volume
   box3f worldBounds(vec3f(-64), vec3f(64));
 
-  std::vector<box3f> regions{pidxVolume.localRegion};
+  std::vector<box3f> regions{pidxVolume->localRegion};
   ospray::cpp::Data regionData(regions.size() * 2, OSP_FLOAT3, regions.data());
   model.set("regions", regionData);
-  model.addVolume(pidxVolume.volume);
+  model.addVolume(pidxVolume->volume);
   model.commit();
 
   Camera camera("perspective");
@@ -147,13 +148,10 @@ int main(int argc, char **argv) {
         datasetPath = currentTimestep->path;
         std::cout << "dataset for timestep  = " << datasetPath << std::endl;
 
-        model.removeVolume(pidxVolume.volume);
-        pidxVolume = PIDXVolume(datasetPath, tfcn, variableName, currentTimestep->timestep);
-        //std::cout << "rank " << rank << Committing volume" << std::endl;
-        //pidxVolume.volume.commit();
-        std::cout << "rank " << rank << " Adding volume" << std::endl;
-        model.addVolume(pidxVolume.volume);
-        std::cout << "rank " << rank << " commiting model" << std::endl;
+        model.removeVolume(pidxVolume->volume);
+        pidxVolume = std::make_shared<PIDXVolume>(datasetPath, tfcn,
+            variableName, currentTimestep->timestep);
+        model.addVolume(pidxVolume->volume);
         model.commit();
       }
     }
@@ -198,6 +196,7 @@ int main(int argc, char **argv) {
   if (rank == 0) {
     std::cout << "Avg. frame time: " << avgFrameTime / nframes << "s\n";
   }
+  pidxVolume = nullptr;
 
   MPI_Finalize();
   return 0;

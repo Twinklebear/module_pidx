@@ -28,6 +28,8 @@ struct PIDXVolume {
 
   PIDXVolume(const std::string &path, ospray::cpp::TransferFunction tfcn,
       const std::string &currentVariableName, size_t currentTimestep);
+  PIDXVolume(const PIDXVolume &p) = delete;
+  PIDXVolume& operator=(const PIDXVolume &p) = delete;
   ~PIDXVolume();
   void update();
 };

@@ -17,12 +17,9 @@ PIDXVolume::PIDXVolume(const std::string &path, TransferFunction tfcn,
   update();
 }
 PIDXVolume::~PIDXVolume() {
-  // TODO: Is the volume being released properly here?
-  // TODO: We should not close the access when rendering the movie since
-  // we need it around longer than an individual volume.
   PIDX_close_access(pidxAccess);
   volume.release();
-  //transferFunction.release();
+  transferFunction.release();
 }
 void PIDXVolume::update() {
   const int rank = mpicommon::world.rank;
