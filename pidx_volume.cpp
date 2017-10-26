@@ -19,7 +19,6 @@ PIDXVolume::PIDXVolume(const std::string &path, TransferFunction tfcn,
 PIDXVolume::~PIDXVolume() {
   PIDX_close_access(pidxAccess);
   volume.release();
-  transferFunction.release();
 }
 void PIDXVolume::update() {
   const int rank = mpicommon::world.rank;
