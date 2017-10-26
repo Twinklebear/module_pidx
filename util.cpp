@@ -60,20 +60,22 @@ bool operator<(const UintahTimestep &a, const UintahTimestep &b) {
   return a.timestep < b.timestep;
 }
 
-std::set<UintahTimestep> collectUintahTimesteps(const std::string &dir) {
-  DIR *dp = opendir(dir.c_str());
-  if (!dp) {
-    throw std::runtime_error("failed to open directory: " + dir);
-  }
-
+std::set<UintahTimestep> collectUintahTimesteps(const std::vector<std::string> &dirs) {
   std::set<UintahTimestep> timesteps;
-  for (dirent *e = readdir(dp); e; e = readdir(dp)) {
-    const std::string idxFile = dir + "/" + std::string(e->d_name) + "/l0/CCVars.idx";
-    struct stat fileStat = {0};
-    if (stat(idxFile.c_str(), &fileStat) == 0) {
-      // The timestep files are in the pattern t######, so take out the t
-      const std::string fname = e->d_name + 1;
-      timesteps.emplace(size_t(std::stoull(e->d_name + 1)), idxFile);
+  for (const auto &dir : dirs) {
+    DIR *dp = opendir(dir.c_str());
+    if (!dp) {
+      throw std::runtime_error("failed to open directory: " + dir);
+    }
+
+    for (dirent *e = readdir(dp); e; e = readdir(dp)) {
+      const std::string idxFile = dir + "/" + std::string(e->d_name) + "/l0/CCVars.idx";
+      struct stat fileStat = {0};
+      if (stat(idxFile.c_str(), &fileStat) == 0) {
+        // The timestep files are in the pattern t######, so take out the t
+        const std::string fname = e->d_name + 1;
+        timesteps.emplace(size_t(std::stoull(e->d_name + 1)), idxFile);
+      }
     }
   }
   return timesteps;

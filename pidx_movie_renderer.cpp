@@ -31,7 +31,7 @@ int main(int argc, char **argv) {
 
   vec2i fbSize(1080, 1920);
   std::string datasetPath;
-  std::string timestepDir;
+  std::vector<std::string> timestepDirs;
   std::string outputPrefix = "frame";
   size_t framesPerTimestep = 2;
   std::string variableName;
@@ -40,14 +40,19 @@ int main(int argc, char **argv) {
       datasetPath = argv[++i];
     } else if (std::strcmp("-o", argv[i]) == 0) {
       outputPrefix = argv[++i];
-    } else if (std::strcmp("-timesteps", argv[i]) == 0) {
-      timestepDir = argv[++i];
     } else if (std::strcmp("-variable", argv[i]) == 0) {
       variableName = std::string(argv[++i]);
+    } else if (std::strcmp("-timesteps", argv[i]) == 0) {
+      for (; i + 1 < argc; ++i) {
+        if (argv[i + 1][0] == '-') {
+          break;
+        }
+        timestepDirs.push_back(argv[i + 1]);
+      }
     }
   }
 
-  if (datasetPath.empty() && timestepDir.empty()) {
+  if (datasetPath.empty() && timestepDirs.empty()) {
     throw std::runtime_error("Usage: mpirun -np <N> ./pidx_movie_renderer [options]\n"
         "Options:\n"
         "-dataset <dataset.idx>       Specify the IDX datset to load and render\n"
@@ -97,7 +102,7 @@ int main(int argc, char **argv) {
   if (datasetPath.empty()) {
     // Follow the Uintah directory structure for PIDX to the CCVars.idx for
     // the timestep
-    uintahTimesteps = collectUintahTimesteps(timestepDir);
+    uintahTimesteps = collectUintahTimesteps(timestepDirs);
     std::cout << "Read " << uintahTimesteps.size() << " timestep dirs" << std::endl;
     currentTimestep = uintahTimesteps.cbegin();
     datasetPath = currentTimestep->path;

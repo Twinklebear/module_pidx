@@ -44,7 +44,7 @@ int main(int argc, char **argv) {
       timestep = std::atoll(argv[++i]);
     } else if (std::strcmp("-variable", argv[i]) == 0) {
       variableName = std::string(argv[++i]);
-    } else if (std::strcmp("-timestep-dirs", argv[i]) == 0) {
+    } else if (std::strcmp("-timesteps", argv[i]) == 0) {
       for (; i + 1 < argc; ++i) {
         if (argv[i + 1][0] == '-') {
           break;
@@ -103,6 +103,20 @@ int main(int argc, char **argv) {
   AppData appdata;
 
   Model model;
+
+  std::set<UintahTimestep> uintahTimesteps;
+  if (datasetPath.empty()) {
+    // Follow the Uintah directory structure for PIDX to the CCVars.idx for
+    // the timestep
+    uintahTimesteps = collectUintahTimesteps(timestepDirs);
+    std::cout << "Read " << uintahTimesteps.size() << " timestep dirs" << std::endl;
+    auto currentTimestep = uintahTimesteps.cbegin();
+    datasetPath = currentTimestep->path;
+    timestep = currentTimestep->timestep;
+    std::cout << "dataset for first timestep = " << datasetPath
+      << ", timestep = " << timestep << std::endl;
+  }
+
   PIDXVolume pidxVolume(datasetPath, tfcn, variableName, timestep);
   // TODO: Update based on volume
   box3f worldBounds(vec3f(-64), vec3f(64));

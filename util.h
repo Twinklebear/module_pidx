@@ -69,7 +69,7 @@ struct UintahTimestep {
 };
 bool operator<(const UintahTimestep &a, const UintahTimestep &b);
 
-std::set<UintahTimestep> collectUintahTimesteps(const std::string &dir);
+std::set<UintahTimestep> collectUintahTimesteps(const std::vector<std::string> &dirs);
 
 std::string pidx_error_to_string(const PIDX_return_code rc);
 
