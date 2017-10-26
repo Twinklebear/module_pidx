@@ -67,6 +67,7 @@ int main(int argc, char **argv) {
   TransferFunction tfcn("piecewise_linear");
   // Fill in some initial data for transfer fcn
   {
+#if 0
     const std::vector<vec3f> colors = {
       vec3f(0, 0, 0.56),
       vec3f(0, 0, 1),
@@ -77,6 +78,9 @@ int main(int argc, char **argv) {
       vec3f(0.5, 0, 0)
     };
     const std::vector<float> opacities = {0.0001, 1.0};
+#else
+#include "qi-visit-hardcoded.h"
+#endif
     ospray::cpp::Data colorsData(colors.size(), OSP_FLOAT3, colors.data());
     ospray::cpp::Data opacityData(opacities.size(), OSP_FLOAT, opacities.data());
     colorsData.commit();
