@@ -5,8 +5,8 @@
 #include <stdexcept>
 #include "image_util.h"
 
-JPGCompressor::JPGCompressor(int quality)
-  : compressor(tjInitCompress()), buffer(nullptr), bufsize(0), quality(quality)
+JPGCompressor::JPGCompressor(int quality, bool flipy)
+  : compressor(tjInitCompress()), buffer(nullptr), bufsize(0), quality(quality), flipy(flipy)
 {}
 JPGCompressor::~JPGCompressor() {
   if (buffer) {
@@ -17,9 +17,10 @@ JPGCompressor::~JPGCompressor() {
 const std::pair<unsigned char*, unsigned long> JPGCompressor::compress(uint32_t *pixels,
     int width, int height)
 {
+  const int flags = flipy ? TJFLAG_BOTTOMUP : 0;
   const int rc = tjCompress2(compressor, reinterpret_cast<unsigned char*>(pixels),
       width, width * 4, height, TJPF_RGBA, &buffer, &bufsize, TJSAMP_420,
-      quality, TJFLAG_BOTTOMUP);
+      quality, flags);
   if (rc != 0) {
     throw std::runtime_error("Failed to compress JPG!");
   }

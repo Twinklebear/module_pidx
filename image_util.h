@@ -9,9 +9,10 @@ class JPGCompressor {
   unsigned char *buffer;
   unsigned long bufsize;
   int quality;
+  bool flipy;
 
 public:
-  JPGCompressor(int quality);
+  JPGCompressor(int quality, bool flipy = true);
   ~JPGCompressor();
 
   /* Compress and RGBA image and return a pointer to the JPG buffer.
