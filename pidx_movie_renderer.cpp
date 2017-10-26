@@ -130,13 +130,13 @@ int main(int argc, char **argv) {
   FrameBuffer fb(fbSize, OSP_FB_SRGBA, OSP_FB_COLOR | OSP_FB_ACCUM);
   fb.clear(OSP_FB_COLOR | OSP_FB_ACCUM);
 
-  JPGCompressor compressor(90);
+  JPGCompressor compressor(90, false);
 
   mpicommon::world.barrier();
 
   float avgFrameTime = 0;
-  size_t nframes = 100;
-  size_t spp = 1;
+  size_t nframes = uintahTimesteps.size() * framesPerTimestep;
+  size_t spp = 4;
   float radiansPerSecond = 0.5;
   for (size_t i = 0; i < nframes; ++i) {
     using namespace std::chrono;
