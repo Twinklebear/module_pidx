@@ -13,8 +13,7 @@ struct AppState {
   // eye pos, look dir, up dir
   std::array<ospcommon::vec3f, 3> v;
   ospcommon::vec2i fbSize;
-  int currentField;
-  int currentTimestep;
+  size_t currentTimestep;
   bool cameraChanged, quit, fbSizeChanged,
        tfcnChanged, timestepChanged, fieldChanged;
 
@@ -24,6 +23,7 @@ struct AppState {
 // Struct for holding the other app data buffers and info that
 // we can't bcast directly.
 struct AppData {
+  std::string currentVariable;
   std::vector<ospcommon::vec3f> tfcn_colors;
   std::vector<float> tfcn_alphas;
 };

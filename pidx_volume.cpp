@@ -124,7 +124,7 @@ void PIDXVolume::update() {
       MPI_MIN, MPI_COMM_WORLD);
   MPI_Allreduce(&localValueRange.y, &valueRange.y, 1, MPI_FLOAT,
       MPI_MAX, MPI_COMM_WORLD);
-  valueRange = vec2f(0.0, 0.15);
+  //valueRange = vec2f(0.0, 0.15);
   transferFunction.set("valueRange", valueRange);
   transferFunction.commit();
 

@@ -31,6 +31,8 @@ struct PIDXVolume {
   PIDXVolume(const PIDXVolume &p) = delete;
   PIDXVolume& operator=(const PIDXVolume &p) = delete;
   ~PIDXVolume();
+
+private:
   void update();
 };
 

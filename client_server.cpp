@@ -17,11 +17,14 @@ ServerConnection::~ServerConnection() {
   server_thread.join();
 }
 bool ServerConnection::get_metadata(std::vector<std::string> &vars,
-    std::vector<size_t> &times)
+      std::vector<size_t> &times, std::string &variableName,
+      size_t &timestep)
 {
   if (have_metadata) {
     vars = variables;
     times = timesteps;
+    variableName = app_data.currentVariable;
+    timestep = app_state.currentTimestep;
     return true;
   }
   return false;
@@ -39,15 +42,20 @@ void ServerConnection::update_app_state(const AppState &state, const AppData &da
   std::lock_guard<std::mutex> lock(state_mutex);
   app_state.v = state.v;
   app_state.fbSize = state.fbSize;
-  app_state.currentField = state.currentField;
-  app_state.currentTimestep = state.currentTimestep;
+  if (state.timestepChanged) {
+    app_state.currentTimestep = state.currentTimestep;
+  }
   app_state.cameraChanged = state.cameraChanged ? state.cameraChanged : app_state.cameraChanged;
   app_state.fbSizeChanged = state.fbSizeChanged ? state.fbSizeChanged : app_state.fbSizeChanged;
   app_state.tfcnChanged = state.tfcnChanged ? state.tfcnChanged : app_state.tfcnChanged;
   app_state.timestepChanged = state.timestepChanged ? state.timestepChanged : app_state.timestepChanged;
   app_state.fieldChanged = state.fieldChanged ? state.fieldChanged : app_state.fieldChanged;
 
-  app_data = data;
+  if (state.fieldChanged) {
+    app_data.currentVariable = data.currentVariable;
+  }
+  app_data.tfcn_colors = data.tfcn_colors;
+  app_data.tfcn_alphas = data.tfcn_alphas;
 }
 void ServerConnection::connection_thread() {
   ospcommon::socket_t render_server = ospcommon::connect(server_host.c_str(), server_port);
@@ -61,6 +69,9 @@ void ServerConnection::connection_thread() {
   ospcommon::read(render_server, &size, sizeof(size_t));
   timesteps.resize(size, 0);
   ospcommon::read(render_server, timesteps.data(), timesteps.size() * sizeof(size_t));
+
+  app_data.currentVariable = ospcommon::read_string(render_server);
+  ospcommon::read(render_server, &app_state.currentTimestep, sizeof(size_t));
   have_metadata = true;
 
   while (true) {
@@ -79,6 +90,9 @@ void ServerConnection::connection_thread() {
     {
       std::lock_guard<std::mutex> lock(state_mutex);
       ospcommon::write(render_server, &app_state, sizeof(AppState));
+      if (app_state.fieldChanged) {
+        ospcommon::write(render_server, app_data.currentVariable);
+      }
       if (app_state.tfcnChanged) {
         size_t size = app_data.tfcn_colors.size();
         ospcommon::write(render_server, &size, sizeof(size_t));
@@ -113,7 +127,8 @@ ClientConnection::ClientConnection(const int port) : compressor(90) {
   client = ospcommon::listen(listen_socket);
 }
 void ClientConnection::send_metadata(const std::vector<std::string> &vars,
-    const std::set<UintahTimestep> &timesteps)
+    const std::set<UintahTimestep> &timesteps, const std::string &variableName,
+    const size_t timestep)
 {
   size_t size = vars.size();
   ospcommon::write(client, &size, sizeof(size));
@@ -128,6 +143,9 @@ void ClientConnection::send_metadata(const std::vector<std::string> &vars,
   size = times.size();
   ospcommon::write(client, &size, sizeof(size));
   ospcommon::write(client, times.data(), sizeof(size_t) * times.size());
+
+  ospcommon::write(client, variableName);
+  ospcommon::write(client, &timestep, sizeof(size_t));
   ospcommon::flush(client);
 }
 void ClientConnection::send_frame(uint32_t *img, int width, int height) {
@@ -138,6 +156,9 @@ void ClientConnection::send_frame(uint32_t *img, int width, int height) {
 }
 void ClientConnection::recieve_app_state(AppState &app, AppData &data) {
   ospcommon::read(client, &app, sizeof(AppState));
+  if (app.fieldChanged) {
+    data.currentVariable = ospcommon::read_string(client);
+  }
   if (app.tfcnChanged) {
     size_t size = 0;
     ospcommon::read(client, &size, sizeof(size_t));

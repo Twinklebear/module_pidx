@@ -28,6 +28,7 @@ struct WindowState {
   bool cameraChanged;
   AppState &app;
   bool isImGuiHovered;
+  int currentVariableIdx, currentTimestepIdx;
 
   WindowState(AppState &app, Arcball &camera)
     : camera(camera), prevMouse(-1), cameraChanged(false), app(app),
@@ -175,23 +176,37 @@ int main(int argc, char **argv) {
     if (ImGui::Begin("Volume Info")) {
       if (!timesteps.empty()) {
         app.timestepChanged = ImGui::SliderInt("Timestep",
-            &app.currentTimestep, 0, timesteps.size());
-        ImGui::Text("Current Timestep %lu", timesteps[app.currentTimestep]);
+            &windowState->currentTimestepIdx, 0, timesteps.size() - 1);
+        ImGui::Text("Current Timestep %lu", timesteps[windowState->currentTimestepIdx]);
+        if (app.timestepChanged) {
+          app.currentTimestep = timesteps[windowState->currentTimestepIdx];
+        }
       }
       if (!variables.empty()) {
-        app.fieldChanged = ImGui::ListBox("Variable", &app.currentField,
+        app.fieldChanged = ImGui::ListBox("Variable", &windowState->currentVariableIdx,
             [](void *v, int i, const char **out) {
               auto *list = reinterpret_cast<std::vector<std::string>*>(v);
               *out = (*list)[i].c_str();
               return true;
             },
             &variables, variables.size());
+        if (app.fieldChanged) {
+          appdata.currentVariable = variables[windowState->currentVariableIdx];
+        }
       }
       if (variables.empty() && timesteps.empty()) {
         ImGui::Text("Waiting for server to load data");
-        if (server.get_metadata(variables, timesteps)) {
-          app.currentField = 0;
-          app.currentTimestep = 0;
+        server.get_metadata(variables, timesteps, appdata.currentVariable,
+            app.currentTimestep);
+
+        if (!timesteps.empty()) {
+          auto t = std::find(timesteps.begin(), timesteps.end(), app.currentTimestep);
+          windowState->currentTimestepIdx = std::distance(timesteps.begin(), t);
+        }
+
+        if (!variables.empty()) {
+          auto v = std::find(variables.begin(), variables.end(), appdata.currentVariable);
+          windowState->currentVariableIdx = std::distance(variables.begin(), v);
         }
       }
     }

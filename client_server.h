@@ -36,7 +36,8 @@ public:
    * meta data returned.
    */
   bool get_metadata(std::vector<std::string> &vars,
-      std::vector<size_t> &timesteps);
+      std::vector<size_t> &timesteps, std::string &variableName,
+      size_t &timestep);
   /* Get the new JPG recieved from the network, if we've got a new one,
    * otherwise the buf is unchanged.
    */
@@ -57,7 +58,8 @@ class ClientConnection {
 public:
   ClientConnection(const int port);
   void send_metadata(const std::vector<std::string> &vars,
-      const std::set<UintahTimestep> &timesteps);
+      const std::set<UintahTimestep> &timesteps,
+      const std::string &variableName, const size_t timestep);
   void send_frame(uint32_t *img, int width, int height);
   void recieve_app_state(AppState &app, AppData &data);
 };

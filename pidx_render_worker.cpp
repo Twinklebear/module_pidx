@@ -33,17 +33,18 @@ int main(int argc, char **argv) {
 
   std::string datasetPath;
   std::vector<std::string> timestepDirs;
-  size_t timestep = 0;
-  std::string variableName;
+  AppState app;
+  AppData appdata;
+
   for (int i = 1; i < argc; ++i) {
     if (std::strcmp("-dataset", argv[i]) == 0) {
       datasetPath = argv[++i];
     } else if (std::strcmp("-port", argv[i]) == 0) {
       port = std::atoi(argv[++i]);
     } else if (std::strcmp("-timestep", argv[i]) == 0) {
-      timestep = std::atoll(argv[++i]);
+      app.currentTimestep = std::atoll(argv[++i]);
     } else if (std::strcmp("-variable", argv[i]) == 0) {
-      variableName = std::string(argv[++i]);
+      appdata.currentVariable = std::string(argv[++i]);
     } else if (std::strcmp("-timesteps", argv[i]) == 0) {
       for (; i + 1 < argc; ++i) {
         if (argv[i + 1][0] == '-') {
@@ -99,9 +100,6 @@ int main(int argc, char **argv) {
     tfcn.set("opacities", opacityData);
   }
 
-  AppState app;
-  AppData appdata;
-
   Model model;
 
   std::set<UintahTimestep> uintahTimesteps;
@@ -110,21 +108,22 @@ int main(int argc, char **argv) {
     // the timestep
     uintahTimesteps = collectUintahTimesteps(timestepDirs);
     std::cout << "Read " << uintahTimesteps.size() << " timestep dirs" << std::endl;
-    auto currentTimestep = uintahTimesteps.cbegin();
-    datasetPath = currentTimestep->path;
-    timestep = currentTimestep->timestep;
+    auto t = uintahTimesteps.begin();
+    datasetPath = t->path;
+    app.currentTimestep = t->timestep;
     std::cout << "dataset for first timestep = " << datasetPath
-      << ", timestep = " << timestep << std::endl;
+      << ", timestep = " << app.currentTimestep << std::endl;
   }
 
-  PIDXVolume pidxVolume(datasetPath, tfcn, variableName, timestep);
+  auto pidxVolume = std::make_shared<PIDXVolume>(datasetPath, tfcn,
+      appdata.currentVariable, app.currentTimestep);
   // TODO: Update based on volume
   box3f worldBounds(vec3f(-64), vec3f(64));
 
-  std::vector<box3f> regions{pidxVolume.localRegion};
+  std::vector<box3f> regions{pidxVolume->localRegion};
   ospray::cpp::Data regionData(regions.size() * 2, OSP_FLOAT3, regions.data());
   model.set("regions", regionData);
-  model.addVolume(pidxVolume.volume);
+  model.addVolume(pidxVolume->volume);
   model.commit();
 
   Camera camera("perspective");
@@ -145,8 +144,8 @@ int main(int argc, char **argv) {
   fb.clear(OSP_FB_COLOR | OSP_FB_ACCUM | OSP_FB_VARIANCE);
 
   if (rank == 0) {
-    // TODO: Send over the current timestep and field we started with
-    client->send_metadata(pidxVolume.pidxVars, std::set<UintahTimestep>{});
+    client->send_metadata(pidxVolume->pidxVars, uintahTimesteps,
+        appdata.currentVariable, app.currentTimestep);
   }
 
   mpicommon::world.barrier();
@@ -170,8 +169,9 @@ int main(int argc, char **argv) {
     auto endFrame = high_resolution_clock::now();
 
     if (rank == 0) {
-      std::cout << "Frame took " << duration_cast<milliseconds>(endFrame - startFrame).count()
-        << "ms\n";
+      //std::cout << "Frame took "
+      //<< duration_cast<milliseconds>(endFrame - startFrame).count()
+      //<< "ms\n";
 
       uint32_t *img = (uint32_t*)fb.map(OSP_FB_COLOR);
       client->send_frame(img, app.fbSize.x, app.fbSize.y);
@@ -222,22 +222,40 @@ int main(int argc, char **argv) {
       app.tfcnChanged = false;
     }
     if (app.fieldChanged) {
-      std::cout << "Got field change, to field #" << app.currentField << "\n";
-      // TODO: We need to recreate the volume, otherwise ospray doesn't re-build the
-      // grid accelerator and we get artifacts in the bricking
-      pidxVolume.currentVariable = app.currentField;
-      pidxVolume.update();
+      size_t sz = appdata.currentVariable.size();
+      MPI_Bcast(&sz, sizeof(size_t), MPI_BYTE, 0, MPI_COMM_WORLD);
+      if (rank != 0) {
+        appdata.currentVariable.resize(sz, ' ');
+      }
+      MPI_Bcast(&appdata.currentVariable[0], sz, MPI_BYTE, 0, MPI_COMM_WORLD);
+      std::cout << "Got field change, to field #" << appdata.currentVariable << "\n";
+    }
+    if (app.timestepChanged) {
+      MPI_Bcast(&app.currentTimestep, sizeof(size_t), MPI_BYTE, 0, MPI_COMM_WORLD);
+      std::cout << "Got timestep change, to time #" << app.currentTimestep << "\n";
+      if (!uintahTimesteps.empty()) {
+        auto t = std::find_if(uintahTimesteps.begin(), uintahTimesteps.end(),
+            [&](const UintahTimestep &t) {
+              return t.timestep == app.currentTimestep;
+            });
+        datasetPath = t->path;
+        std::cout << "Changing to dataset path: " << datasetPath << "\n";
+      }
+    }
+    if (app.timestepChanged || app.fieldChanged) {
+      model.removeVolume(pidxVolume->volume);
+      pidxVolume = std::make_shared<PIDXVolume>(datasetPath, tfcn,
+          appdata.currentVariable, app.currentTimestep);
+      model.addVolume(pidxVolume->volume);
+      model.commit();
 
       fb.clear(OSP_FB_COLOR | OSP_FB_ACCUM | OSP_FB_VARIANCE);
       app.fieldChanged = false;
-    }
-    if (app.timestepChanged) {
-      std::cout << "Got timestep change, to time #" << app.currentTimestep << "\n";
-
-      fb.clear(OSP_FB_COLOR | OSP_FB_ACCUM | OSP_FB_VARIANCE);
       app.timestepChanged = false;
     }
   }
+
+  pidxVolume = nullptr;
 
   MPI_Finalize();
   return 0;
