@@ -5,6 +5,7 @@
 #include <chrono>
 #include <mpiCommon/MPICommon.h>
 #include <mpi.h>
+#include <unistd.h>
 #include "ospray/ospray_cpp/Camera.h"
 #include "ospray/ospray_cpp/Data.h"
 #include "ospray/ospray_cpp/Device.h"
@@ -76,6 +77,9 @@ int main(int argc, char **argv) {
 
   std::unique_ptr<ClientConnection> client;
   if (rank == 0) {
+    char hostname[1024] = {0};
+    gethostname(hostname, 1023);
+    std::cout << "Now listening for client on " << hostname << ":" << port << std::endl;
     client = ospcommon::make_unique<ClientConnection>(port);
   }
 
