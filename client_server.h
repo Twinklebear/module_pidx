@@ -17,6 +17,7 @@ class ServerConnection {
   int server_port;
 
   std::vector<unsigned char> jpg_buf;
+  int frame_time;
   bool new_frame;
   std::mutex frame_mutex;
 
@@ -43,7 +44,7 @@ public:
   /* Get the new JPG recieved from the network, if we've got a new one,
    * otherwise the buf is unchanged.
    */
-  bool get_new_frame(std::vector<unsigned char> &buf);
+  bool get_new_frame(std::vector<unsigned char> &buf, int &frame_time);
   // Update the app state to be sent over the network for the next frame
   void update_app_state(const AppState &state, const AppData &data);
 
@@ -63,7 +64,7 @@ public:
   void send_metadata(const std::vector<std::string> &vars,
       const std::set<UintahTimestep> &timesteps,
       const std::string &variableName, const size_t timestep);
-  void send_frame(uint32_t *img, int width, int height);
+  void send_frame(uint32_t *img, int width, int height, int frame_time);
   void recieve_app_state(AppState &app, AppData &data);
 };
 

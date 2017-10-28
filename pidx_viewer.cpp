@@ -157,9 +157,10 @@ int main(int argc, char **argv) {
   std::vector<size_t> timesteps;
 
   std::vector<uint32_t> imgBuf;
+  int frameTime = 0;
   while (!app.quit) {
     imgBuf.resize(app.fbSize.x * app.fbSize.y, 0);
-    if (server.get_new_frame(jpgBuf)) {
+    if (server.get_new_frame(jpgBuf, frameTime)) {
       decompressor.decompress(jpgBuf.data(), jpgBuf.size(), app.fbSize.x,
           app.fbSize.y, imgBuf);
     }
@@ -208,6 +209,8 @@ int main(int argc, char **argv) {
           auto v = std::find(variables.begin(), variables.end(), appdata.currentVariable);
           windowState->currentVariableIdx = std::distance(variables.begin(), v);
         }
+      } else {
+        ImGui::Text("Last frame took %dms", frameTime);
       }
     }
     ImGui::End();

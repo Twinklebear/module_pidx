@@ -173,12 +173,10 @@ int main(int argc, char **argv) {
     auto endFrame = high_resolution_clock::now();
 
     if (rank == 0) {
-      //std::cout << "Frame took "
-      //<< duration_cast<milliseconds>(endFrame - startFrame).count()
-      //<< "ms\n";
+      const int frameTime = duration_cast<milliseconds>(endFrame - startFrame).count();
 
       uint32_t *img = (uint32_t*)fb.map(OSP_FB_COLOR);
-      client->send_frame(img, app.fbSize.x, app.fbSize.y);
+      client->send_frame(img, app.fbSize.x, app.fbSize.y, frameTime);
       fb.unmap(img);
 
       client->recieve_app_state(app, appdata);

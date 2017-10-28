@@ -29,10 +29,11 @@ bool ServerConnection::get_metadata(std::vector<std::string> &vars,
   }
   return false;
 }
-bool ServerConnection::get_new_frame(std::vector<unsigned char> &buf) {
+bool ServerConnection::get_new_frame(std::vector<unsigned char> &buf, int &time) {
   std::lock_guard<std::mutex> lock(frame_mutex);
   if (new_frame) {
     buf = jpg_buf;
+    time = frame_time;
     new_frame = false;
     return true;
   }
@@ -75,6 +76,7 @@ void ServerConnection::connection_thread() {
       std::lock_guard<std::mutex> lock(frame_mutex);
       jpg_buf.resize(jpg_size, 0);
       read_stream.read(jpg_buf.data(), jpg_size);
+      read_stream >> frame_time;
       new_frame = true;
     }
 
@@ -116,10 +118,11 @@ void ClientConnection::send_metadata(const std::vector<std::string> &vars,
   write_stream << vars << times << variableName << timestep;
   write_stream.flush();
 }
-void ClientConnection::send_frame(uint32_t *img, int width, int height) {
+void ClientConnection::send_frame(uint32_t *img, int width, int height, int frame_time) {
   auto jpg = compressor.compress(img, width, height);
   write_stream << jpg.second;
   write_stream.write(jpg.first, jpg.second);
+  write_stream << frame_time;
   write_stream.flush();
 }
 void ClientConnection::recieve_app_state(AppState &app, AppData &data) {
