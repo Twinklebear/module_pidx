@@ -108,7 +108,8 @@ void charCallback(GLFWwindow *window, unsigned int c) {
   }
 }
 
-int main(int argc, char **argv) {
+int main(int argc, const char **argv) {
+  ospInit(&argc, argv);
   std::string serverhost;
   int port = -1;
   for (int i = 1; i < argc; ++i) {
