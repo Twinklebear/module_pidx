@@ -60,6 +60,10 @@ void keyCallback(GLFWwindow *window, int key, int scancode, int action, int mods
 }
 void cursorPosCallback(GLFWwindow *window, double x, double y) {
   WindowState *state = static_cast<WindowState*>(glfwGetWindowUserPointer(window));
+
+  ImGuiIO& io = ImGui::GetIO();
+  if(io.WantCaptureMouse) return;
+
   if (state->isImGuiHovered) {
     return;
   }
