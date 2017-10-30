@@ -114,8 +114,8 @@ void PIDXVolume::update() {
   std::cout << "Rank " << rank << " load time: "
     << duration_cast<milliseconds>(endLoad - startLoad).count() << "ms\n";
 
-  auto minmax = std::minmax_element(reinterpret_cast<float*>(data.data()),
-      reinterpret_cast<float*>(data.data()) + nLocalVals);
+  auto minmax = std::minmax_element(reinterpret_cast<double*>(data.data()),
+				    reinterpret_cast<double*>(data.data()) + nLocalVals);
   // TODO: Need MPI Allreduce here
   vec2f localValueRange = vec2f(*minmax.first, *minmax.second);
   // std::cout << "Local range = " << localValueRange << "\n";
@@ -134,7 +134,7 @@ void PIDXVolume::update() {
 
   volume.set("transferFunction", transferFunction);
   // TODO: Parse the IDX type name into the OSPRay type name
-  volume.set("voxelType", "float");
+  volume.set("voxelType", "double");
   // TODO: This will be the local dimensions later
   volume.set("dimensions", vec3i(localDims));
   volume.set("gridOrigin", vec3f(localOffset) - vec3f(fullDims) / 2.f);

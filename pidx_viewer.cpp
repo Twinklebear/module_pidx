@@ -5,12 +5,12 @@
 #include <chrono>
 #include <turbojpeg.h>
 #include <GLFW/glfw3.h>
-#include "ospray/ospray_cpp/TransferFunction.h"
 #include "ospcommon/utility/SaveImage.h"
-#include "widgets/transferFunction.h"
+#include "ospray/ospray_cpp/TransferFunction.h"
 #include "common/sg/transferFunction/TransferFunction.h"
-#include "widgets/imgui_impl_glfw_gl3.h"
 #include "common/imgui/imgui.h"
+#include "widgets/imgui_impl_glfw_gl3.h"
+#include "widgets/TransferFunctionWidget.h"
 #include "arcball.h"
 #include "util.h"
 #include "image_util.h"
@@ -137,7 +137,7 @@ int main(int argc, char **argv) {
 
   auto windowState = std::make_shared<WindowState>(app, arcballCamera);
   auto transferFcn = std::make_shared<ospray::sg::TransferFunction>();
-  auto tfnWidget = std::make_shared<ospray::TransferFunction>(transferFcn);
+  auto tfnWidget = std::make_shared<ospray::tfn_widget::TransferFunctionWidget>(transferFcn);
 
   ImGui_ImplGlfwGL3_Init(window, false);
 
