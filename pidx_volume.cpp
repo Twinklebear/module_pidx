@@ -170,9 +170,17 @@ void PIDXVolume::update() {
   auto startLoad = high_resolution_clock::now();
   PIDX_CHECK(PIDX_close(pidxFile));
   auto endLoad = high_resolution_clock::now();
+  const double loadTime = duration_cast<milliseconds>(endLoad - startLoad).count() * 0.001;
 
-  std::cout << "Rank " << rank << " load time: "
-    << duration_cast<milliseconds>(endLoad - startLoad).count() << "ms\n";
+  const double bandwidthMB = (data.size() * 1e-6) / loadTime;
+
+  std::cout << "Rank " << rank << " load time: " << loadTime << "s\n"
+    << "bandwidth: " << bandwidthMB << " MB/s\n";
+  if (rank == 0) {
+    const size_t totalBytes = fullDims.x * fullDims.y * fullDims.z * bytesPerSample * valuesPerSample;
+    std::cout << "Aggregate bandwidth: " << (totalBytes * 1e-6) / loadTime << " MB/s\n";
+  }
+
 
   if (idx_var.components != 1) {
     throw std::runtime_error("Unsupported # of components in type, "
