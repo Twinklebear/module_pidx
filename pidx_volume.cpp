@@ -6,6 +6,65 @@
 using namespace ospray::cpp;
 using namespace ospcommon;
 
+IDXVar parse_idx_type(const std::string &type) {
+  const auto pos = type.find('*');
+  if (pos == std::string::npos) {
+    throw std::runtime_error("Invalid IDX type string: " + type);
+  }
+  IDXVar var;
+  var.components = std::stol(type);
+  var.type = type.substr(pos + 1);
+  // Convert the type string to one we can give ospray
+  if (var.type == "uint8") {
+    var.type = "uchar";
+  } else if (var.type == "int16") {
+    var.type = "short";
+  } else if (var.type == "uint16") {
+    var.type = "ushort";
+  } else if (var.type == "float32") {
+    var.type = "float";
+  } else if (var.type == "float64") {
+    var.type = "double";
+  } else {
+    throw std::runtime_error("Unsupported IDX datatype!");
+  }
+  return var;
+}
+
+template<typename T>
+std::pair<T, T> compute_range(const std::vector<char> &data) {
+  auto minmax = std::minmax_element(reinterpret_cast<const T*>(data.data()),
+      reinterpret_cast<const T*>(data.data() + data.size() / sizeof(T)));
+  return std::make_pair(*minmax.first, *minmax.second);
+}
+
+vec2f compute_volume_range(const std::vector<char> &data, const std::string &type) {
+  vec2f range;
+  if (type == "uchar") {
+    auto minmax = compute_range<uint8_t>(data);
+    range.x = static_cast<float>(minmax.first);
+    range.y = static_cast<float>(minmax.second);
+  } else if (type == "short") {
+    auto minmax = compute_range<int16_t>(data);
+    range.x = static_cast<float>(minmax.first);
+    range.y = static_cast<float>(minmax.second);
+  } else if (type == "ushort") {
+    auto minmax = compute_range<uint16_t>(data);
+    range.x = static_cast<float>(minmax.first);
+    range.y = static_cast<float>(minmax.second);
+  } else if (type == "float") {
+    auto minmax = compute_range<float>(data);
+    range.x = minmax.first;
+    range.y = minmax.second;
+  } else if (type == "double") {
+    auto minmax = compute_range<double>(data);
+    range.x = static_cast<float>(minmax.first);
+    range.y = static_cast<float>(minmax.second);
+    std::cout << "range = " << range << "\n";
+  }
+  return range;
+}
+
 PIDXVolume::PIDXVolume(const std::string &path, TransferFunction tfcn,
     const std::string &currentVariableName, size_t currentTimestep)
   : datasetPath(path), volume("block_bricked_volume"), transferFunction(tfcn),
@@ -75,6 +134,7 @@ void PIDXVolume::update() {
       << "Values per sample: " << valuesPerSample << "\n"
       << "Bits per sample: " << bitsPerSample << std::endl;
   }
+  const IDXVar idx_var = parse_idx_type(variable->type_name);
 
   const vec3sz grid = vec3sz(computeGrid(numRanks));
   const vec3sz brickDims = vec3sz(fullDims) / grid;
@@ -114,10 +174,14 @@ void PIDXVolume::update() {
   std::cout << "Rank " << rank << " load time: "
     << duration_cast<milliseconds>(endLoad - startLoad).count() << "ms\n";
 
+  if (idx_var.components != 1) {
+    throw std::runtime_error("Unsupported # of components in type, "
+        "only scalar types are supported!");
+  }
+
   auto minmax = std::minmax_element(reinterpret_cast<float*>(data.data()),
       reinterpret_cast<float*>(data.data()) + nLocalVals);
-  // TODO: Need MPI Allreduce here
-  vec2f localValueRange = vec2f(*minmax.first, *minmax.second);
+  vec2f localValueRange = compute_volume_range(data, idx_var.type);
   // std::cout << "Local range = " << localValueRange << "\n";
 
   MPI_Allreduce(&localValueRange.x, &valueRange.x, 1, MPI_FLOAT,
@@ -134,7 +198,7 @@ void PIDXVolume::update() {
 
   volume.set("transferFunction", transferFunction);
   // TODO: Parse the IDX type name into the OSPRay type name
-  volume.set("voxelType", "float");
+  volume.set("voxelType", idx_var.type);
   // TODO: This will be the local dimensions later
   volume.set("dimensions", vec3i(localDims));
   volume.set("gridOrigin", vec3f(localOffset) - vec3f(fullDims) / 2.f);

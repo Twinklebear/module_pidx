@@ -7,6 +7,15 @@
 #include "util.h"
 #include "PIDX.h"
 
+struct IDXVar {
+  size_t components;
+  std::string type;
+};
+// Parse the IDX type string into the number of components and type name.
+// IDX type strings follow the formatting N*typename, where N is the number
+// of components of the type 'typename' in the type.
+IDXVar parse_idx_type(const std::string &type);
+
 struct PIDXVolume {
   std::string datasetPath;
   PIDX_access pidxAccess;
