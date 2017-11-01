@@ -58,37 +58,44 @@ void keyCallback(GLFWwindow *window, int key, int scancode, int action, int mods
   // Forward on to ImGui
   ImGui_ImplGlfwGL3_KeyCallback(window, key, scancode, action, mods);
 }
+
 void cursorPosCallback(GLFWwindow *window, double x, double y) {
   WindowState *state = static_cast<WindowState*>(glfwGetWindowUserPointer(window));
 
   ImGuiIO& io = ImGui::GetIO();
   if(io.WantCaptureMouse) return;
 
-  if (state->isImGuiHovered) {
-    return;
-  }
+  if (state->isImGuiHovered) { return; }
   const vec2f mouse(x, y);
   if (state->prevMouse != vec2f(-1)) {
-    const bool leftDown = glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS;
-    const bool rightDown = glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_RIGHT) == GLFW_PRESS;
-    const bool middleDown = glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_MIDDLE) == GLFW_PRESS;
+    const bool leftDown =
+      glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS;
+    const bool rightDown =
+      glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_RIGHT) == GLFW_PRESS;
+    const bool middleDown =
+      glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_MIDDLE) == GLFW_PRESS;
     const vec2f prev = state->prevMouse;
 
-    if (leftDown) {
+    if (leftDown)
+    {
       const vec2f mouseFrom(clamp(prev.x * 2.f / state->app.fbSize.x - 1.f,  -1.f, 1.f),
                             clamp(1.f - 2.f * prev.y / state->app.fbSize.y, -1.f, 1.f));
-      const vec2f mouseTo(clamp(mouse.x * 2.f / state->app.fbSize.x - 1.f,  -1.f, 1.f),
-                          clamp(1.f - 2.f * mouse.y / state->app.fbSize.y, -1.f, 1.f));
+      const vec2f mouseTo  (clamp(mouse.x * 2.f / state->app.fbSize.x - 1.f,  -1.f, 1.f),
+			    clamp(1.f - 2.f * mouse.y / state->app.fbSize.y, -1.f, 1.f));
       state->camera.rotate(mouseFrom, mouseTo);
       state->cameraChanged = true;
-    } else if (rightDown) {
+    }
+    else if (rightDown)
+    {
       state->camera.zoom(mouse.y - prev.y);
       state->cameraChanged = true;
-    } else if (middleDown) {
+    }
+    else if (middleDown)
+    {
       const vec2f mouseFrom(clamp(prev.x * 2.f / state->app.fbSize.x - 1.f,  -1.f, 1.f),
                             clamp(1.f - 2.f * prev.y / state->app.fbSize.y, -1.f, 1.f));
-      const vec2f mouseTo(clamp(mouse.x * 2.f / state->app.fbSize.x - 1.f,  -1.f, 1.f),
-                          clamp(1.f - 2.f * mouse.y / state->app.fbSize.y, -1.f, 1.f));
+      const vec2f mouseTo   (clamp(mouse.x * 2.f / state->app.fbSize.x - 1.f,  -1.f, 1.f),
+			     clamp(1.f - 2.f * mouse.y / state->app.fbSize.y, -1.f, 1.f));
       const vec2f mouseDelta = mouseTo - mouseFrom;
       state->camera.pan(mouseDelta);
       state->cameraChanged = true;
@@ -96,11 +103,13 @@ void cursorPosCallback(GLFWwindow *window, double x, double y) {
   }
   state->prevMouse = mouse;
 }
+
 void framebufferSizeCallback(GLFWwindow *window, int width, int height) {
   WindowState *state = static_cast<WindowState*>(glfwGetWindowUserPointer(window));
   state->app.fbSize = vec2i(width, height);
   state->app.fbSizeChanged = true;
 }
+
 void charCallback(GLFWwindow *window, unsigned int c) {
   ImGuiIO& io = ImGui::GetIO();
   if (c > 0 && c < 0x10000) {
@@ -108,7 +117,9 @@ void charCallback(GLFWwindow *window, unsigned int c) {
   }
 }
 
-int main(int argc, const char **argv) {
+int main(int argc, const char **argv)
+{
+  //------------------------------------------------------------
   ospInit(&argc, argv);
   std::string serverhost;
   int port = -1;
@@ -123,21 +134,17 @@ int main(int argc, const char **argv) {
     throw std::runtime_error("Usage: ./pidx_viewer -server <server host> -port <port>");
   }
 
+  //------------------------------------------------------------  
   AppState app;
   AppData appdata;
   // TODO: Update based on volume?
   box3f worldBounds(vec3f(-64), vec3f(64));
   Arcball arcballCamera(worldBounds);
-
-  if (!glfwInit()) {
-    return 1;
-  }
+  // Initialize openGL
+  if (!glfwInit()) { return 1; }
   GLFWwindow *window = glfwCreateWindow(app.fbSize.x, app.fbSize.y,
-      "PIDX OSPRay Viewer", nullptr, nullptr);
-  if (!window) {
-    glfwTerminate();
-    return 1;
-  }
+					"PIDX OSPRay Viewer", nullptr, nullptr);
+  if (!window) { glfwTerminate(); return 1; }
   glfwMakeContextCurrent(window);
 
   auto windowState = std::make_shared<WindowState>(app, arcballCamera);
@@ -145,12 +152,10 @@ int main(int argc, const char **argv) {
   auto tfnWidget = std::make_shared<ospray::TransferFunction>(transferFcn);
 
   ImGui_ImplGlfwGL3_Init(window, false);
-
   glfwSetKeyCallback(window, keyCallback);
   glfwSetCursorPosCallback(window, cursorPosCallback);
   glfwSetWindowUserPointer(window, windowState.get());
   glfwSetFramebufferSizeCallback(window, framebufferSizeCallback);
-
   glfwSetMouseButtonCallback(window, ImGui_ImplGlfwGL3_MouseButtonCallback);
   glfwSetScrollCallback(window, ImGui_ImplGlfwGL3_ScrollCallback);
   glfwSetCharCallback(window, charCallback);
@@ -169,43 +174,65 @@ int main(int argc, const char **argv) {
   state->cameraChanged = true;
   //------------------------------------------------------------
   
-  while (!app.quit) {
+  while (!app.quit)
+  {
+    //--------------------------------
     imgBuf.resize(app.fbSize.x * app.fbSize.y, 0);
     if (server.get_new_frame(jpgBuf, frameTime)) {
       decompressor.decompress(jpgBuf.data(), jpgBuf.size(), app.fbSize.x,
           app.fbSize.y, imgBuf);
     }
-
-    glClear(GL_COLOR_BUFFER_BIT);
-    glDrawPixels(app.fbSize.x, app.fbSize.y, GL_RGBA, GL_UNSIGNED_BYTE, imgBuf.data());
-
     const auto tfcnTimeStamp = transferFcn->childrenLastModified();
 
+    //--------------------------------    
+    glClear(GL_COLOR_BUFFER_BIT);
+    glDrawPixels(app.fbSize.x, app.fbSize.y, GL_RGBA, GL_UNSIGNED_BYTE, imgBuf.data());
+    
     ImGui_ImplGlfwGL3_NewFrame();
-
     tfnWidget->drawUi();
 
-    if (ImGui::Begin("Volume Info")) {
+    //--------------------------------
+    const float DISTANCE = 10.0f;
+    static int corner = 0;
+    ImVec2 window_pos = ImVec2((corner & 1) ?
+			       ImGui::GetIO().DisplaySize.x - DISTANCE : DISTANCE,
+			       (corner & 2) ?
+			       ImGui::GetIO().DisplaySize.y - DISTANCE : DISTANCE);
+    ImVec2 window_pos_pivot = ImVec2((corner & 1) ? 1.0f : 0.0f, (corner & 2) ? 1.0f : 0.0f);
+    ImGui::SetNextWindowPos(window_pos, ImGuiCond_Always, window_pos_pivot);
+    // Transparent background
+    ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0.0f, 0.0f, 0.0f, 0.3f));
+    if (ImGui::Begin("Volume Information", NULL,
+		     ImGuiWindowFlags_NoTitleBar|
+		     ImGuiWindowFlags_NoResize|
+		     ImGuiWindowFlags_AlwaysAutoResize|
+		     ImGuiWindowFlags_NoMove|
+		     ImGuiWindowFlags_NoSavedSettings))
+    {      
       if (!timesteps.empty()) {
         app.timestepChanged = ImGui::SliderInt("Timestep",
-            &windowState->currentTimestepIdx, 0, timesteps.size() - 1);
+					       &windowState->currentTimestepIdx,
+					       0, timesteps.size() - 1);
         ImGui::Text("Current Timestep %lu", timesteps[windowState->currentTimestepIdx]);
         if (app.timestepChanged) {
           app.currentTimestep = timesteps[windowState->currentTimestepIdx];
         }
       }
       if (!variables.empty()) {
-        app.fieldChanged = ImGui::ListBox("Variable", &windowState->currentVariableIdx,
-            [](void *v, int i, const char **out) {
-              auto *list = reinterpret_cast<std::vector<std::string>*>(v);
-              *out = (*list)[i].c_str();
-              return true;
-            },
-            &variables, variables.size());
+        app.fieldChanged =
+	  ImGui::ListBox("variable", &windowState->currentVariableIdx,
+			 [](void *v, int i, const char **out)
+			 {
+			   auto *list = reinterpret_cast<std::vector<std::string>*>(v);
+			   *out = (*list)[i].c_str();
+			   return true;
+			 },
+			 &variables, variables.size());
         if (app.fieldChanged) {
           appdata.currentVariable = variables[windowState->currentVariableIdx];
         }
       }
+      ImGui::Separator();
       if (variables.empty() && timesteps.empty()) {
         ImGui::Text("Waiting for server to load data");
         server.get_metadata(variables, timesteps, appdata.currentVariable,
@@ -224,30 +251,31 @@ int main(int argc, const char **argv) {
         ImGui::Text("Last frame took %dms", frameTime);
       }
     }
+    ImGui::PopStyleColor();    
     ImGui::End();
-
     ImGui::Render();
-
+    
+    //--------------------------------    
     glfwSwapBuffers(window);
 
+    //--------------------------------    
     glfwPollEvents();
-    if (glfwWindowShouldClose(window)) {
-      app.quit = true;
-    }
+    if (glfwWindowShouldClose(window)) { app.quit = true; }
 
     tfnWidget->render();
 
     if (transferFcn->childrenLastModified() != tfcnTimeStamp) {
-      appdata.tfcn_colors = transferFcn->child("colors").nodeAs<ospray::sg::DataVector3f>()->v;
-      const auto &ospAlpha = transferFcn->child("alpha").nodeAs<ospray::sg::DataVector2f>()->v;
+      appdata.tfcn_colors =
+	transferFcn->child("colors").nodeAs<ospray::sg::DataVector3f>()->v;
+      const auto &ospAlpha =
+	transferFcn->child("alpha").nodeAs<ospray::sg::DataVector2f>()->v;
       appdata.tfcn_alphas.clear();
-      std::transform(ospAlpha.begin(), ospAlpha.end(), std::back_inserter(appdata.tfcn_alphas),
-          [](const vec2f &a) {
-            return a.y;
-          });
+      std::transform(ospAlpha.begin(), ospAlpha.end(),
+		     std::back_inserter(appdata.tfcn_alphas),
+		     [](const vec2f &a) { return a.y; });
       app.tfcnChanged = true;
     }
-
+    
     const vec3f eye = windowState->camera.eyePos();
     const vec3f look = windowState->camera.lookDir();
     const vec3f up = windowState->camera.upDir();
@@ -267,6 +295,7 @@ int main(int argc, const char **argv) {
     app.tfcnChanged = false;
   }
 
+  //------------------------------------------------------------
   ImGui_ImplGlfwGL3_Shutdown();
   glfwDestroyWindow(window);
 
