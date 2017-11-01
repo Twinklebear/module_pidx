@@ -163,6 +163,12 @@ int main(int argc, const char **argv) {
 
   std::vector<uint32_t> imgBuf;
   int frameTime = 0;
+
+  // Hack by Qi: The initial camera position is not updated
+  WindowState *state = static_cast<WindowState*>(glfwGetWindowUserPointer(window));
+  state->cameraChanged = true;
+  //------------------------------------------------------------
+  
   while (!app.quit) {
     imgBuf.resize(app.fbSize.x * app.fbSize.y, 0);
     if (server.get_new_frame(jpgBuf, frameTime)) {
