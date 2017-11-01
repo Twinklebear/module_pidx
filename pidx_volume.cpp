@@ -33,8 +33,9 @@ IDXVar parse_idx_type(const std::string &type) {
 
 template<typename T>
 std::pair<T, T> compute_range(const std::vector<char> &data) {
-  auto minmax = std::minmax_element(reinterpret_cast<const T*>(data.data()),
-      reinterpret_cast<const T*>(data.data() + data.size() / sizeof(T)));
+  auto minmax =
+    std::minmax_element(reinterpret_cast<const T*>(data.data()),
+			reinterpret_cast<const T*>(data.data()) + data.size() / sizeof(T));
   return std::make_pair(*minmax.first, *minmax.second);
 }
 
