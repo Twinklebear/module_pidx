@@ -94,8 +94,8 @@ void cursorPosCallback(GLFWwindow *window, double x, double y) {
     {
       const vec2f mouseFrom(clamp(prev.x * 2.f / state->app.fbSize.x - 1.f,  -1.f, 1.f),
                             clamp(1.f - 2.f * prev.y / state->app.fbSize.y, -1.f, 1.f));
-      const vec2f mouseTo  (clamp(mouse.x * 2.f / state->app.fbSize.x - 1.f,  -1.f, 1.f),
-			    clamp(1.f - 2.f * mouse.y / state->app.fbSize.y, -1.f, 1.f));
+      const vec2f mouseTo   (clamp(mouse.x * 2.f / state->app.fbSize.x - 1.f,  -1.f, 1.f),
+			     clamp(1.f - 2.f * mouse.y / state->app.fbSize.y, -1.f, 1.f));
       const vec2f mouseDelta = mouseTo - mouseFrom;
       state->camera.pan(mouseDelta);
       state->cameraChanged = true;
@@ -116,7 +116,6 @@ void charCallback(GLFWwindow *window, unsigned int c) {
     io.AddInputCharacter((unsigned short)c);
   }
 }
-
 
 int main(int argc, const char **argv)
 {
