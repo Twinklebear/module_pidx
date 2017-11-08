@@ -22,7 +22,8 @@ const std::pair<unsigned char*, unsigned long> JPGCompressor::compress(uint32_t 
       width, width * 4, height, TJPF_RGBA, &buffer, &bufsize, TJSAMP_420,
       quality, flags);
   if (rc != 0) {
-    throw std::runtime_error("Failed to compress JPG!");
+    const std::string tj_err = tjGetErrorStr();
+    throw std::runtime_error("Failed to compress JPG! Error: " + tj_err);
   }
   return std::make_pair(buffer, bufsize);
 }
@@ -41,7 +42,8 @@ void JPGDecompressor::decompress(unsigned char *jpg, const unsigned long jpeg_si
       reinterpret_cast<unsigned char*>(img.data()),
       width, width * 4, height, TJPF_RGBA, TJFLAG_BOTTOMUP);
   if (rc != 0) {
-    throw std::runtime_error("Failed to decompress JPG!");
+    const std::string tj_err = tjGetErrorStr();
+    throw std::runtime_error("Failed to decompress JPG! Error: " + tj_err);
   }
 }
 
