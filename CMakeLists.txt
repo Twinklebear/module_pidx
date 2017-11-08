@@ -95,8 +95,6 @@ if (OSPRAY_MODULE_PIDX)
   if (OSPRAY_MODULE_PIDX_VIEWER)
     find_package(GLFW)
     include_directories(${GLFW_INCLUDE_DIRS})
-    include_directories(${CMAKE_SOURCE_DIR}/modules/module_tfn)
-    include_directories(${CMAKE_SOURCE_DIR}/modules/module_tfn/apps)
     ospray_create_application(pidx_viewer
       pidx_viewer.cpp
       arcball.cpp
@@ -110,8 +108,6 @@ if (OSPRAY_MODULE_PIDX)
       ospray_imgui3d_sg
       ospray_sg
       ${TURBOJPEG_LIBRARY}
-      ospray_module_tfn_core
-      ospray_module_tfn_widget
       )
   endif()
 endif()
