@@ -110,7 +110,7 @@ if (OSPRAY_MODULE_PIDX)
       ospray_imgui3d_sg
       ospray_sg
       ${TURBOJPEG_LIBRARY}
-      ospray_module_tfn
+      ospray_module_tfn_core
       ospray_module_tfn_widget
       )
   endif()
