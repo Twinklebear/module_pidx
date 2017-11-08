@@ -5,6 +5,9 @@ on the distributed sample app included with OSPRay.
 
 ## Building
 
+This module now requires the ospray ['tfn' module](https://github.com/wilsonCernWq/module_tfn) 
+during building.
+
 Clone the repo into your OSPRay modules directory, then run CMake to build
 OSPRay and pass `-DOSPRAY_MODULE_PIDX=ON` to build the module's movie
 renderer and render workers and `-DOSPRAY_MODULE_PIDX_VIEWER=ON` to build
