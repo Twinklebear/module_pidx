@@ -40,7 +40,7 @@ std::pair<T, T> compute_range(const std::vector<char> &data) {
 }
 
 vec2f compute_volume_range(const std::vector<char> &data, const std::string &type) {
-  vec2f range;
+  vec2f range(0, 0);
   if (type == "uchar") {
     auto minmax = compute_range<uint8_t>(data);
     range.x = static_cast<float>(minmax.first);
@@ -140,7 +140,6 @@ void PIDXVolume::update() {
   const vec3sz grid = vec3sz(computeGrid(numRanks));
   const vec3sz brickDims = vec3sz(fullDims) / grid;
   const vec3sz brickId(rank % grid.x, (rank / grid.x) % grid.y, rank / (grid.x * grid.y));
-  const vec3f gridOrigin = vec3f(brickId) * vec3f(brickDims);
 
   const std::array<int, 3> ghosts = computeGhostFaces(vec3i(brickId), vec3i(grid));
   vec3sz ghostDims(0);
@@ -172,7 +171,6 @@ void PIDXVolume::update() {
   PIDX_CHECK(PIDX_close(pidxFile));
   auto endLoad = high_resolution_clock::now();
   const double loadTime = duration_cast<milliseconds>(endLoad - startLoad).count() * 0.001;
-
   const double bandwidthMB = (data.size() * 1e-6) / loadTime;
 
   std::cout << "Rank " << rank << " load time: " << loadTime << "s\n"
@@ -182,17 +180,12 @@ void PIDXVolume::update() {
     std::cout << "Aggregate bandwidth: " << (totalBytes * 1e-6) / loadTime << " MB/s\n";
   }
 
-
   if (idx_var.components != 1) {
     throw std::runtime_error("Unsupported # of components in type, "
         "only scalar types are supported!");
   }
 
-  auto minmax = std::minmax_element(reinterpret_cast<float*>(data.data()),
-      reinterpret_cast<float*>(data.data()) + nLocalVals);
   vec2f localValueRange = compute_volume_range(data, idx_var.type);
-  // std::cout << "Local range = " << localValueRange << "\n";
-
   MPI_Allreduce(&localValueRange.x, &valueRange.x, 1, MPI_FLOAT,
       MPI_MIN, MPI_COMM_WORLD);
   MPI_Allreduce(&localValueRange.y, &valueRange.y, 1, MPI_FLOAT,
