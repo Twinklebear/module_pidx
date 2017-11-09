@@ -7,7 +7,8 @@ option(OSPRAY_MODULE_PIDX_VIEWER "PIDX remote viewer client" OFF)
 if (OSPRAY_MODULE_PIDX)
 
   set(CMAKE_CXX_STANDARD 11)
-  set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
+  set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} 
+    ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
   find_package(PIDX REQUIRED)
   find_package(MPI REQUIRED)
 
@@ -46,8 +47,10 @@ if (OSPRAY_MODULE_PIDX)
     ${PIDX_INCLUDE_DIRS}
     ${TURBOJPEG_INCLUDE_DIR})
 
-  include_directories(${CMAKE_SOURCE_DIR}/apps/common
-    ${CMAKE_SOURCE_DIR}/apps/exampleViewer)
+  include_directories(
+    ${CMAKE_SOURCE_DIR}/apps/common
+    ${CMAKE_SOURCE_DIR}/apps/exampleViewer
+    ${CMAKE_SOURCE_DIR}/apps/exampleViewer/common/imgui)
 
   add_library(pidx_app_util
     pidx_volume.cpp
@@ -95,10 +98,12 @@ if (OSPRAY_MODULE_PIDX)
   if (OSPRAY_MODULE_PIDX_VIEWER)
     find_package(GLFW)
     include_directories(${GLFW_INCLUDE_DIRS})
-    include_directories(${CMAKE_SOURCE_DIR}/modules/module_tfn/module)
+    include_directories(${TFN_MODULE_ROOT}/src)
     ospray_create_application(pidx_viewer
       pidx_viewer.cpp
       arcball.cpp
+      ${TFN_MODULE_ROOT}/src/TransferFunctionModule.cpp
+      ${TFN_MODULE_ROOT}/src/widgets/TransferFunctionWidget.cpp
       LINK
       pidx_app_util
       ${OPENGL_LIBRARIES}
@@ -109,8 +114,6 @@ if (OSPRAY_MODULE_PIDX)
       ospray_imgui3d_sg
       ospray_sg
       ${TURBOJPEG_LIBRARY}
-      tfn_module_core
-      tfn_module_widget
       )
   endif()
 endif()
