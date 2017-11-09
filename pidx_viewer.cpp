@@ -4,14 +4,21 @@
 #include <array>
 #include <chrono>
 #include <functional>
+
 #include <turbojpeg.h>
 #include <GLFW/glfw3.h>
+
 #include "ospcommon/utility/SaveImage.h"
 #include "ospray/ospray_cpp/TransferFunction.h"
 #include "common/sg/transferFunction/TransferFunction.h"
 #include "common/imgui/imgui.h"
 #include "widgets/imgui_impl_glfw_gl3.h"
-#include "widgets/TransferFunctionWidget.h"
+#ifndef USE_TFN_MODULE
+# include "widgets/transferFunction.h"
+#else
+# include "widgets/TransferFunctionWidget.h"
+#endif
+
 #include "arcball.h"
 #include "util.h"
 #include "image_util.h"
@@ -151,6 +158,9 @@ int main(int argc, const char **argv)
 
   auto windowState = std::make_shared<WindowState>(app, arcballCamera);
   auto transferFcn = std::make_shared<ospray::sg::TransferFunction>();
+#ifndef USE_TFN_MODULE
+  auto tfnWidget = std::make_shared<ospray::TransferFunction>(transferFcn);
+#else
   auto tfnWidget = 
     std::make_shared<tfn::tfn_widget::TransferFunctionWidget>
     ([=]() { return static_cast<size_t>(transferFcn->child("numSamples").valueAs<int>()); },
@@ -174,7 +184,7 @@ int main(int argc, const char **argv)
        transferFcn->add(alpha);
        colors->markAsModified();
      });
-
+#endif
   ImGui_ImplGlfwGL3_Init(window, false);
   glfwSetKeyCallback(window, keyCallback);
   glfwSetCursorPosCallback(window, cursorPosCallback);

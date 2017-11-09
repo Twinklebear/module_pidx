@@ -96,14 +96,24 @@ if (OSPRAY_MODULE_PIDX)
     )
 
   if (OSPRAY_MODULE_PIDX_VIEWER)
-    find_package(GLFW)
+
+    find_package(GLFW REQUIRED)
     include_directories(${GLFW_INCLUDE_DIRS})
-    include_directories(${TFN_MODULE_ROOT}/src)
+
+    # optional transfer function module
+    if(TFN_MODULE_ROOT)
+      include_directories(${TFN_MODULE_ROOT}/src)      
+      set(TFN_MODULE_SRC 
+	${TFN_MODULE_ROOT}/src/TransferFunctionModule.cpp
+	${TFN_MODULE_ROOT}/src/widgets/TransferFunctionWidget.cpp)
+      add_definitions(-DUSE_TFN_MODULE)
+      mark_as_advanced(TFN_MODULE_SRC)
+    endif(TFN_MODULE_ROOT)
+
     ospray_create_application(pidx_viewer
       pidx_viewer.cpp
       arcball.cpp
-      ${TFN_MODULE_ROOT}/src/TransferFunctionModule.cpp
-      ${TFN_MODULE_ROOT}/src/widgets/TransferFunctionWidget.cpp
+      ${TFN_MODULE_SRC}
       LINK
       pidx_app_util
       ${OPENGL_LIBRARIES}
@@ -115,6 +125,8 @@ if (OSPRAY_MODULE_PIDX)
       ospray_sg
       ${TURBOJPEG_LIBRARY}
       )
-  endif()
+
+  endif()  
+
 endif()
 
