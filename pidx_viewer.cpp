@@ -27,17 +27,18 @@ struct WindowState {
   vec2f prevMouse;
   bool cameraChanged;
   AppState &app;
-  bool isImGuiHovered;
   int currentVariableIdx, currentTimestepIdx;
 
   WindowState(AppState &app, Arcball &camera)
-    : camera(camera), prevMouse(-1), cameraChanged(false), app(app),
-    isImGuiHovered(false)
+    : camera(camera), prevMouse(-1), cameraChanged(false), app(app)
   {}
 };
 
 void keyCallback(GLFWwindow *window, int key, int scancode, int action, int mods) {
-  WindowState *state = static_cast<WindowState*>(glfwGetWindowUserPointer(window));
+  if (ImGui::GetIO().WantCaptureKeyboard) {
+    return;
+  }
+
   if (action == GLFW_PRESS) {
     switch (key) {
       case GLFW_KEY_ESCAPE:
@@ -60,12 +61,12 @@ void keyCallback(GLFWwindow *window, int key, int scancode, int action, int mods
 }
 
 void cursorPosCallback(GLFWwindow *window, double x, double y) {
+  if (ImGui::GetIO().WantCaptureMouse) {
+    return;
+  }
+
   WindowState *state = static_cast<WindowState*>(glfwGetWindowUserPointer(window));
 
-  ImGuiIO& io = ImGui::GetIO();
-  if(io.WantCaptureMouse) return;
-
-  if (state->isImGuiHovered) { return; }
   const vec2f mouse(x, y);
   if (state->prevMouse != vec2f(-1)) {
     const bool leftDown =
@@ -266,9 +267,9 @@ int main(int argc, const char **argv)
 
     if (transferFcn->childrenLastModified() != tfcnTimeStamp) {
       appdata.tfcn_colors =
-	transferFcn->child("colors").nodeAs<ospray::sg::DataVector3f>()->v;
+        transferFcn->child("colors").nodeAs<ospray::sg::DataVector3f>()->v;
       const auto &ospAlpha =
-	transferFcn->child("alpha").nodeAs<ospray::sg::DataVector2f>()->v;
+        transferFcn->child("alpha").nodeAs<ospray::sg::DataVector2f>()->v;
       appdata.tfcn_alphas.clear();
       std::transform(ospAlpha.begin(), ospAlpha.end(),
 		     std::back_inserter(appdata.tfcn_alphas),
@@ -284,7 +285,6 @@ int main(int argc, const char **argv)
     app.v[2] = vec3f(up.x, up.y, up.z);
     app.cameraChanged = windowState->cameraChanged;
     windowState->cameraChanged = false;
-    windowState->isImGuiHovered = ImGui::IsMouseHoveringAnyWindow();
 
     server.update_app_state(app, appdata);
 
