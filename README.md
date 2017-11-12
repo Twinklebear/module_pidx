@@ -12,6 +12,9 @@ the remote viewer client. PIDX and TurboJPEG 1.5.x+ are required, along
 with MPI. You can pass `-DTURBOJPEG_DIR` to the root directory of your
 TurboJPEG installation directory if it's not installed in a standard location.
 
+If you want to use the optional [transfer function widget](https://github.com/wilsonCernWq/TransferFunctionModule),
+you can either [download](https://github.com/wilsonCernWq/TransferFunctionModule/archive/master.zip) or clone `git clone https://github.com/wilsonCernWq/TransferFunctionModule.git` repository to a place you like, and pass `-DTFN_MODULE_ROOT` to the root directory of it.
+
 ## Running the Remote Viewer
 
 To run the remote viewer first start the render workers on your compute nodes.

@@ -3,14 +3,22 @@
 #include <vector>
 #include <array>
 #include <chrono>
+#include <functional>
+
 #include <turbojpeg.h>
 #include <GLFW/glfw3.h>
-#include "ospray/ospray_cpp/TransferFunction.h"
+
 #include "ospcommon/utility/SaveImage.h"
-#include "widgets/transferFunction.h"
+#include "ospray/ospray_cpp/TransferFunction.h"
 #include "common/sg/transferFunction/TransferFunction.h"
-#include "widgets/imgui_impl_glfw_gl3.h"
 #include "common/imgui/imgui.h"
+#include "widgets/imgui_impl_glfw_gl3.h"
+#ifndef USE_TFN_MODULE
+# include "widgets/transferFunction.h"
+#else
+# include "widgets/TransferFunctionWidget.h"
+#endif
+
 #include "arcball.h"
 #include "util.h"
 #include "image_util.h"
@@ -150,8 +158,33 @@ int main(int argc, const char **argv)
 
   auto windowState = std::make_shared<WindowState>(app, arcballCamera);
   auto transferFcn = std::make_shared<ospray::sg::TransferFunction>();
+#ifndef USE_TFN_MODULE
   auto tfnWidget = std::make_shared<ospray::TransferFunction>(transferFcn);
-
+#else
+  auto tfnWidget = 
+    std::make_shared<tfn::tfn_widget::TransferFunctionWidget>
+    ([=]() { return static_cast<size_t>(transferFcn->child("numSamples").valueAs<int>()); },
+     [=](const std::vector<float>& c, const std::vector<float>& a) 
+     {
+       int sampleNum = transferFcn->child("numSamples").valueAs<int>();
+       auto colors = ospray::sg::createNode("colors", "DataVector3f")->nodeAs<ospray::sg::DataVector3f>();
+       auto alpha  = ospray::sg::createNode("alpha", "DataVector2f")->nodeAs<ospray::sg::DataVector2f>();
+       colors->v.resize(sampleNum);
+       alpha->v.resize(sampleNum);
+       std::copy(c.data(), c.data() + c.size(), reinterpret_cast<float*>(colors->v.data()));
+       std::copy(a.data(), a.data() + a.size(), reinterpret_cast<float*>(alpha->v.data()));
+       // for (int i = 0; i < sampleNum; ++i) {
+       // 	 colors->v[i][0] = c[3 * i + 0];
+       // 	 colors->v[i][1] = c[3 * i + 1];
+       // 	 colors->v[i][2] = c[3 * i + 2];
+       // 	 alpha->v[i].x = a[2 * i + 0];
+       // 	 alpha->v[i].y = a[2 * i + 1];
+       // }
+       transferFcn->add(colors);
+       transferFcn->add(alpha);
+       colors->markAsModified();
+     });
+#endif
   ImGui_ImplGlfwGL3_Init(window, false);
   glfwSetKeyCallback(window, keyCallback);
   glfwSetCursorPosCallback(window, cursorPosCallback);
