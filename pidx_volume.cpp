@@ -173,9 +173,9 @@ void PIDXVolume::update() {
   const double loadTime = duration_cast<milliseconds>(endLoad - startLoad).count() * 0.001;
   const double bandwidthMB = (data.size() * 1e-6) / loadTime;
 
-  std::cout << "Rank " << rank << " load time: " << loadTime << "s\n"
-    << "bandwidth: " << bandwidthMB << " MB/s\n";
   if (rank == 0) {
+    std::cout << "Rank " << rank << " load time: " << loadTime << "s\n"
+      << "bandwidth: " << bandwidthMB << " MB/s\n";
     const size_t totalBytes = fullDims.x * fullDims.y * fullDims.z * bytesPerSample * valuesPerSample;
     std::cout << "Aggregate bandwidth: " << (totalBytes * 1e-6) / loadTime << " MB/s\n";
   }
