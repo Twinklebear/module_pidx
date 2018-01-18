@@ -38,7 +38,7 @@ struct WindowState {
   int currentVariableIdx, currentTimestepIdx;
 
   WindowState(AppState &app, Arcball &camera)
-    : camera(camera), prevMouse(-1), cameraChanged(false), app(app)
+    : camera(camera), prevMouse(-1), cameraChanged(true), app(app)
   {}
 };
 
@@ -203,11 +203,6 @@ int main(int argc, const char **argv)
   std::vector<uint32_t> imgBuf;
   int frameTime = 0;
 
-  // Hack by Qi: The initial camera position is not updated
-  WindowState *state = static_cast<WindowState*>(glfwGetWindowUserPointer(window));
-  state->cameraChanged = true;
-  //------------------------------------------------------------
-  
   while (!app.quit)
   {
     //--------------------------------
