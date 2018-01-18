@@ -218,8 +218,14 @@ int main(int argc, const char **argv)
     glDrawPixels(app.fbSize.x, app.fbSize.y, GL_RGBA, GL_UNSIGNED_BYTE, imgBuf.data());
     
     ImGui_ImplGlfwGL3_NewFrame();
-    tfnWidget->drawUi();
 
+#ifndef USE_TFN_MODULE
+    bool tfnWidget_isvalid = true;
+    tfnWidget->drawUi();
+#else
+    bool tfnWidget_isvalid = tfnWidget->drawUI();
+#endif
+    
     //--------------------------------
     const float DISTANCE = 10.0f;
     static int corner = 0;
@@ -290,8 +296,8 @@ int main(int argc, const char **argv)
     //--------------------------------    
     glfwPollEvents();
     if (glfwWindowShouldClose(window)) { app.quit = true; }
-
-    tfnWidget->render();
+    
+    if (tfnWidget_isvalid) { tfnWidget->render(); }
 
     if (transferFcn->childrenLastModified() != tfcnTimeStamp) {
       appdata.tfcn_colors =
