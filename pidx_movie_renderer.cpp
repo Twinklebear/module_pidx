@@ -93,6 +93,8 @@ int main(int argc, char **argv) {
 
     tfcn.set("colors", colorsData);
     tfcn.set("opacities", opacityData);
+    colorsData.release();
+    opacityData.release();
   }
 
   Model model;
@@ -159,7 +161,7 @@ int main(int argc, char **argv) {
 
         model.removeVolume(pidxVolume->volume);
         pidxVolume = std::make_shared<PIDXVolume>(datasetPath, tfcn,
-            variableName, currentTimestep->timestep);
+            variableName, currentTimestep->timestep, pidxAccess);
         model.addVolume(pidxVolume->volume);
         model.commit();
       }
@@ -206,6 +208,10 @@ int main(int argc, char **argv) {
     std::cout << "Avg. frame time: " << avgFrameTime / nframes << "s\n";
   }
   pidxVolume = nullptr;
+  tfcn.release();
+  model.release();
+  renderer.release();
+  camera.release();
 
   MPI_Finalize();
   return 0;
