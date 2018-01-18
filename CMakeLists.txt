@@ -11,41 +11,11 @@ if (OSPRAY_MODULE_PIDX)
     ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
   find_package(PIDX REQUIRED)
   find_package(MPI REQUIRED)
-
-  # find libjpeg-turbo
-  find_path(TURBOJPEG_INCLUDE_DIR
-    NAMES turbojpeg.h
-    PATHS
-    $ENV{LIBJPEG_TURBO_DIR}/include
-    $ENV{TURBOJPEG_DIR}/include
-    ${TURBOJPEG_DIR}/include
-    #linux
-    /opt/libjpeg-turbo/include
-    /usr/include
-    #mac
-    /usr/local/opt/jpeg-turbo/include
-  )
-  find_library(TURBOJPEG_LIBRARY
-    NAMES turbojpeg
-    PATHS
-    $ENV{LIBJPEG_TURBO_DIR}/lib
-    $ENV{TURBOJPEG_DIR}/lib
-    ${TURBOJPEG_DIR}/lib
-    #linux
-    /opt/libjpeg-turbo/lib
-    /usr/lib
-    /usr/lib64
-    #mac
-    /usr/local/opt/jpeg-turbo/lib
-  )
-  if(NOT TURBOJPEG_INCLUDE_DIR)
-    message(FATAL_ERROR "TurboJPEG is not found.")
-  endif(NOT TURBOJPEG_INCLUDE_DIR)
+  find_package(TurboJpeg REQUIRED)
 
   include_directories(
     ${MPI_CXX_INCLUDE_PATH}
-    ${PIDX_INCLUDE_DIRS}
-    ${TURBOJPEG_INCLUDE_DIR})
+    ${PIDX_INCLUDE_DIRS})
 
   include_directories(
     ${CMAKE_SOURCE_DIR}/apps/common
@@ -66,7 +36,7 @@ if (OSPRAY_MODULE_PIDX)
     ospray
     ${PIDX_LIBRARIES}
     ${MPI_CXX_LIBRARIES}
-    ${TURBOJPEG_LIBRARY}
+    TurboJpeg
     )
 
   ospray_create_application(pidx_movie_renderer
@@ -79,7 +49,7 @@ if (OSPRAY_MODULE_PIDX)
     ospray
     ${PIDX_LIBRARIES}
     ${MPI_CXX_LIBRARIES}
-    ${TURBOJPEG_LIBRARY}
+    TurboJpeg
     )
 
   ospray_create_application(pidx_render_worker
@@ -92,7 +62,7 @@ if (OSPRAY_MODULE_PIDX)
     ospray
     ${PIDX_LIBRARIES}
     ${MPI_CXX_LIBRARIES}
-    ${TURBOJPEG_LIBRARY}
+    TurboJpeg
     )
 
   if (OSPRAY_MODULE_PIDX_VIEWER)
@@ -102,11 +72,11 @@ if (OSPRAY_MODULE_PIDX)
     mark_as_advanced(GLFW_ROOT)
 
     # optional transfer function module
-    if(TFN_MODULE_ROOT)
+    if (TFN_MODULE_ROOT)
       include_directories(${TFN_MODULE_ROOT}/src)      
       set(TFN_MODULE_SRC 
-	${TFN_MODULE_ROOT}/src/TransferFunctionModule.cpp
-	${TFN_MODULE_ROOT}/src/widgets/TransferFunctionWidget.cpp)
+        ${TFN_MODULE_ROOT}/src/TransferFunctionModule.cpp
+        ${TFN_MODULE_ROOT}/src/widgets/TransferFunctionWidget.cpp)
       add_definitions(-DUSE_TFN_MODULE)
       mark_as_advanced(TFN_MODULE_SRC)
     endif(TFN_MODULE_ROOT)
@@ -124,7 +94,7 @@ if (OSPRAY_MODULE_PIDX)
       ospray_common
       ospray_imgui3d_sg
       ospray_sg
-      ${TURBOJPEG_LIBRARY}
+      TurboJpeg
       )
 
   endif()  
