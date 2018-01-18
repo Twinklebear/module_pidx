@@ -161,7 +161,7 @@ int main(int argc, char **argv) {
 
         model.removeVolume(pidxVolume->volume);
         pidxVolume = std::make_shared<PIDXVolume>(datasetPath, tfcn,
-            variableName, currentTimestep->timestep, pidxAccess);
+            variableName, currentTimestep->timestep);
         model.addVolume(pidxVolume->volume);
         model.commit();
       }
