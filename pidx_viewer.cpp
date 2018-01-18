@@ -152,7 +152,7 @@ int main(int argc, const char **argv)
   // Initialize openGL
   if (!glfwInit()) { return 1; }
   GLFWwindow *window = glfwCreateWindow(app.fbSize.x, app.fbSize.y,
-					"PIDX OSPRay Viewer", nullptr, nullptr);
+      "PIDX OSPRay Viewer", nullptr, nullptr);
   if (!window) { glfwTerminate(); return 1; }
   glfwMakeContextCurrent(window);
 
@@ -173,13 +173,6 @@ int main(int argc, const char **argv)
        alpha->v.resize(sampleNum);
        std::copy(c.data(), c.data() + c.size(), reinterpret_cast<float*>(colors->v.data()));
        std::copy(a.data(), a.data() + a.size(), reinterpret_cast<float*>(alpha->v.data()));
-       // for (int i = 0; i < sampleNum; ++i) {
-       // 	 colors->v[i][0] = c[3 * i + 0];
-       // 	 colors->v[i][1] = c[3 * i + 1];
-       // 	 colors->v[i][2] = c[3 * i + 2];
-       // 	 alpha->v[i].x = a[2 * i + 0];
-       // 	 alpha->v[i].y = a[2 * i + 1];
-       // }
        transferFcn->add(colors);
        transferFcn->add(alpha);
        colors->markAsModified();
@@ -220,34 +213,33 @@ int main(int argc, const char **argv)
     ImGui_ImplGlfwGL3_NewFrame();
 
 #ifndef USE_TFN_MODULE
-    bool tfnWidget_isvalid = true;
     tfnWidget->drawUi();
 #else
-    bool tfnWidget_isvalid = tfnWidget->drawUI();
+    tfnWidget->drawUI();
 #endif
     
     //--------------------------------
     const float DISTANCE = 10.0f;
     static int corner = 0;
     ImVec2 window_pos = ImVec2((corner & 1) ?
-			       ImGui::GetIO().DisplaySize.x - DISTANCE : DISTANCE,
-			       (corner & 2) ?
-			       ImGui::GetIO().DisplaySize.y - DISTANCE : DISTANCE);
+        ImGui::GetIO().DisplaySize.x - DISTANCE : DISTANCE,
+        (corner & 2) ?
+        ImGui::GetIO().DisplaySize.y - DISTANCE : DISTANCE);
     ImVec2 window_pos_pivot = ImVec2((corner & 1) ? 1.0f : 0.0f, (corner & 2) ? 1.0f : 0.0f);
     ImGui::SetNextWindowPos(window_pos, ImGuiCond_Always, window_pos_pivot);
     // Transparent background
     ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0.0f, 0.0f, 0.0f, 0.3f));
     if (ImGui::Begin("Volume Information", NULL,
-		     ImGuiWindowFlags_NoTitleBar|
-		     ImGuiWindowFlags_NoResize|
-		     ImGuiWindowFlags_AlwaysAutoResize|
-		     ImGuiWindowFlags_NoMove|
-		     ImGuiWindowFlags_NoSavedSettings))
+          ImGuiWindowFlags_NoTitleBar|
+          ImGuiWindowFlags_NoResize|
+          ImGuiWindowFlags_AlwaysAutoResize|
+          ImGuiWindowFlags_NoMove|
+          ImGuiWindowFlags_NoSavedSettings))
     {      
       if (!timesteps.empty()) {
         app.timestepChanged = ImGui::SliderInt("Timestep",
-					       &windowState->currentTimestepIdx,
-					       0, timesteps.size() - 1);
+            &windowState->currentTimestepIdx,
+            0, timesteps.size() - 1);
         ImGui::Text("Current Timestep %lu", timesteps[windowState->currentTimestepIdx]);
         if (app.timestepChanged) {
           app.currentTimestep = timesteps[windowState->currentTimestepIdx];
@@ -255,14 +247,14 @@ int main(int argc, const char **argv)
       }
       if (!variables.empty()) {
         app.fieldChanged =
-	  ImGui::ListBox("variable", &windowState->currentVariableIdx,
-			 [](void *v, int i, const char **out)
-			 {
-			   auto *list = reinterpret_cast<std::vector<std::string>*>(v);
-			   *out = (*list)[i].c_str();
-			   return true;
-			 },
-			 &variables, variables.size());
+          ImGui::ListBox("variable", &windowState->currentVariableIdx,
+              [](void *v, int i, const char **out)
+              {
+                auto *list = reinterpret_cast<std::vector<std::string>*>(v);
+                *out = (*list)[i].c_str();
+                return true;
+              },
+              &variables, variables.size());
         if (app.fieldChanged) {
           appdata.currentVariable = variables[windowState->currentVariableIdx];
         }
@@ -297,7 +289,7 @@ int main(int argc, const char **argv)
     glfwPollEvents();
     if (glfwWindowShouldClose(window)) { app.quit = true; }
     
-    if (tfnWidget_isvalid) { tfnWidget->render(); }
+    tfnWidget->render();
 
     if (transferFcn->childrenLastModified() != tfcnTimeStamp) {
       appdata.tfcn_colors =
@@ -306,8 +298,8 @@ int main(int argc, const char **argv)
         transferFcn->child("alpha").nodeAs<ospray::sg::DataVector2f>()->v;
       appdata.tfcn_alphas.clear();
       std::transform(ospAlpha.begin(), ospAlpha.end(),
-		     std::back_inserter(appdata.tfcn_alphas),
-		     [](const vec2f &a) { return a.y; });
+          std::back_inserter(appdata.tfcn_alphas),
+          [](const vec2f &a) { return a.y; });
       app.tfcnChanged = true;
     }
     
