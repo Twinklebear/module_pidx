@@ -15,7 +15,7 @@ IDXVar parse_idx_type(const std::string &type) {
   var.components = std::stol(type);
   var.type = type.substr(pos + 1);
   // Convert the type string to one we can give ospray
-  if (var.type == "uint8") {
+  if (var.type == "uint8" || var.type == "int8") {
     var.type = "uchar";
   } else if (var.type == "int16") {
     var.type = "short";
