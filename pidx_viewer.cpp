@@ -163,8 +163,7 @@ int main(int argc, const char **argv)
 #else
   auto tfnWidget = 
     std::make_shared<tfn::tfn_widget::TransferFunctionWidget>
-    ([=]() { return static_cast<size_t>(transferFcn->child("numSamples").valueAs<int>()); },
-     [=](const std::vector<float>& c, const std::vector<float>& a) 
+    ([=](const std::vector<float>& c, const std::vector<float>& a, const std::array<float, 2>& r) 
      {
        int sampleNum = transferFcn->child("numSamples").valueAs<int>();
        auto colors = ospray::sg::createNode("colors", "DataVector3f")->nodeAs<ospray::sg::DataVector3f>();
@@ -176,6 +175,7 @@ int main(int argc, const char **argv)
        transferFcn->add(colors);
        transferFcn->add(alpha);
        colors->markAsModified();
+       // Question: How can i add valueRange to sg::transferFunction ??
      });
 #endif
   ImGui_ImplGlfwGL3_Init(window, false);
@@ -289,7 +289,7 @@ int main(int argc, const char **argv)
     glfwPollEvents();
     if (glfwWindowShouldClose(window)) { app.quit = true; }
     
-    tfnWidget->render();
+    tfnWidget->render(transferFcn->child("numSamples").valueAs<int>());
 
     if (transferFcn->childrenLastModified() != tfcnTimeStamp) {
       appdata.tfcn_colors =

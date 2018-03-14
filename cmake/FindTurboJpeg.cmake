@@ -24,6 +24,7 @@ find_library(TurboJpeg_LIBRARY
   $ENV{LIBJPEG_TURBO_DIR}/lib
   $ENV{TURBOJPEG_DIR}/lib
   ${TURBOJPEG_DIR}/lib
+  ${TURBOJPEG_DIR}/lib64
   #linux
   /opt/libjpeg-turbo/lib
   /usr/lib
