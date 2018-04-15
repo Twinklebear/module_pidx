@@ -288,8 +288,12 @@ int main(int argc, const char **argv)
     //--------------------------------    
     glfwPollEvents();
     if (glfwWindowShouldClose(window)) { app.quit = true; }
-    
+
+#ifndef USE_TFN_MODULE
+    tfnWidget->render();
+#else    
     tfnWidget->render(transferFcn->child("numSamples").valueAs<int>());
+#endif
 
     if (transferFcn->childrenLastModified() != tfcnTimeStamp) {
       appdata.tfcn_colors =

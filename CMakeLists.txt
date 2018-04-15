@@ -26,7 +26,6 @@ if (OSPRAY_MODULE_PIDX)
   target_link_libraries(pidx_app_util PUBLIC
     ospray
     ospray_common
-    ospray_mpi_common
     TurboJpeg)
 
   if (OSPRAY_MODULE_PIDX_WORKER)
