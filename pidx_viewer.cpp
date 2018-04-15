@@ -26,7 +26,6 @@
 #include "image_util.h"
 #include "client_server.h"
 
-//using namespace ospray::cpp;
 using namespace ospcommon;
 
 std::vector<unsigned char> jpgBuf;
@@ -172,20 +171,10 @@ int main(int argc, const char **argv)
     std::make_shared<tfn::tfn_widget::TransferFunctionWidget>
     ([&](const std::vector<float>& c, const std::vector<float>& a, const std::array<float, 2>& r) 
      {
-       //const int sampleNum = 256; //transferFcn->child("numSamples").valueAs<int>();
-       //auto colors = ospray::sg::createNode("colors", "DataVector3f")->nodeAs<ospray::sg::DataVector3f>();
-       //auto alpha  = ospray::sg::createNode("alpha", "DataVector2f")->nodeAs<ospray::sg::DataVector2f>();
-       //colors->v.resize(sampleNum);
-       //alpha->v.resize(sampleNum);
        tfn_c.resize(256);
        tfn_a.resize(256);
-       //std::copy(c.data(), c.data() + c.size(), reinterpret_cast<float*>(colors->v.data()));
-       //std::copy(a.data(), a.data() + a.size(), reinterpret_cast<float*>(alpha->v.data()));
        std::copy(c.data(), c.data() + c.size(), reinterpret_cast<float*>(tfn_c.data()));
        std::copy(a.data(), a.data() + a.size(), reinterpret_cast<float*>(tfn_a.data()));
-       //transferFcn->add(colors);
-       //transferFcn->add(alpha);
-       //colors->markAsModified();
        // Question: How can i add valueRange to sg::transferFunction ??
        tfn_modified = true;
      });
@@ -305,7 +294,6 @@ int main(int argc, const char **argv)
 #ifndef USE_TFN_MODULE
     tfnWidget->render();
 #else    
-    //tfnWidget->render(transferFcn->child("numSamples").valueAs<int>());
     tfnWidget->render(256);
 #endif
 
@@ -352,4 +340,3 @@ int main(int argc, const char **argv)
 
   return 0;
 }
-
