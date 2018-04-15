@@ -17,6 +17,7 @@
 #include "ospray/ospray_cpp/Model.h"
 #include "ospcommon/networking/Socket.h"
 #include "util.h"
+#include "pidx_util.h"
 #include "image_util.h"
 #include "pidx_volume.h"
 #include "client_server.h"

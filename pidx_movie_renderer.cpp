@@ -15,6 +15,7 @@
 #include "ospray/ospray_cpp/Volume.h"
 #include "ospray/ospray_cpp/Model.h"
 #include "util.h"
+#include "pidx_util.h"
 #include "image_util.h"
 #include "pidx_volume.h"
 

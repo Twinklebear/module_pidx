@@ -4,7 +4,6 @@
 #include <set>
 #include <vector>
 #include "ospcommon/vec.h"
-#include "PIDX.h"
 
 using vec3sz = ospcommon::vec_t<size_t, 3>;
 
@@ -51,25 +50,12 @@ ospcommon::vec3i computeGrid(int num);
 std::array<int, 3> computeGhostFaces(const ospcommon::vec3i &brickId,
     const ospcommon::vec3i &grid);
 
-#define PIDX_CHECK(F) \
-  { \
-    PIDX_return_code rc = F; \
-    if (rc != PIDX_success) { \
-      const std::string er = "PIDX Error at " #F ": " + pidx_error_to_string(rc); \
-      std::cerr << er << std::endl; \
-      throw std::runtime_error(er); \
-    } \
-  }
-
 struct UintahTimestep {
   size_t timestep;
   std::string path;
-
   UintahTimestep(const size_t timestep, const std::string &path);
 };
+
 bool operator<(const UintahTimestep &a, const UintahTimestep &b);
 
 std::set<UintahTimestep> collectUintahTimesteps(const std::vector<std::string> &dirs);
-
-std::string pidx_error_to_string(const PIDX_return_code rc);
-

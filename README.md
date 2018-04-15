@@ -53,3 +53,10 @@ to connect to.
 ```bash
 ./pidx_viewer -server <rank 0 hostname> -port <port to connect>
 ```
+
+If the viewer cannot be connected to the worker, then try to create one ssh 
+tunnel first.
+
+```bash
+ssh user@remote.server.com -L <local-port>:localhost:<remote-port> -N
+```
