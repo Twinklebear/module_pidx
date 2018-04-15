@@ -9,8 +9,10 @@
 #include <GLFW/glfw3.h>
 
 #include "ospcommon/utility/SaveImage.h"
-#include "ospray/ospray_cpp/TransferFunction.h"
-#include "common/sg/transferFunction/TransferFunction.h"
+#ifndef USE_TFN_MODULE
+# include "ospray/ospray_cpp/TransferFunction.h"
+# include "common/sg/transferFunction/TransferFunction.h"
+#endif
 #include "common/imgui/imgui.h"
 #include "widgets/imgui_impl_glfw_gl3.h"
 #ifndef USE_TFN_MODULE
@@ -24,10 +26,16 @@
 #include "image_util.h"
 #include "client_server.h"
 
-using namespace ospray::cpp;
+//using namespace ospray::cpp;
 using namespace ospcommon;
 
 std::vector<unsigned char> jpgBuf;
+
+#ifdef USE_TFN_MODULE
+std::vector<ospcommon::vec3f> tfn_c;
+std::vector<ospcommon::vec2f> tfn_a;
+bool tfn_modified = false;
+#endif
 
 // Extra stuff we need in GLFW callbacks
 struct WindowState {
@@ -129,7 +137,6 @@ void charCallback(GLFWwindow *window, unsigned int c) {
 int main(int argc, const char **argv)
 {
   //------------------------------------------------------------
-  ospInit(&argc, argv);
   std::string serverhost;
   int port = -1;
   for (int i = 1; i < argc; ++i) {
@@ -157,25 +164,30 @@ int main(int argc, const char **argv)
   glfwMakeContextCurrent(window);
 
   auto windowState = std::make_shared<WindowState>(app, arcballCamera);
-  auto transferFcn = std::make_shared<ospray::sg::TransferFunction>();
 #ifndef USE_TFN_MODULE
+  auto transferFcn = std::make_shared<ospray::sg::TransferFunction>();
   auto tfnWidget = std::make_shared<ospray::TransferFunction>(transferFcn);
 #else
   auto tfnWidget = 
     std::make_shared<tfn::tfn_widget::TransferFunctionWidget>
-    ([=](const std::vector<float>& c, const std::vector<float>& a, const std::array<float, 2>& r) 
+    ([&](const std::vector<float>& c, const std::vector<float>& a, const std::array<float, 2>& r) 
      {
-       int sampleNum = transferFcn->child("numSamples").valueAs<int>();
-       auto colors = ospray::sg::createNode("colors", "DataVector3f")->nodeAs<ospray::sg::DataVector3f>();
-       auto alpha  = ospray::sg::createNode("alpha", "DataVector2f")->nodeAs<ospray::sg::DataVector2f>();
-       colors->v.resize(sampleNum);
-       alpha->v.resize(sampleNum);
-       std::copy(c.data(), c.data() + c.size(), reinterpret_cast<float*>(colors->v.data()));
-       std::copy(a.data(), a.data() + a.size(), reinterpret_cast<float*>(alpha->v.data()));
-       transferFcn->add(colors);
-       transferFcn->add(alpha);
-       colors->markAsModified();
+       //const int sampleNum = 256; //transferFcn->child("numSamples").valueAs<int>();
+       //auto colors = ospray::sg::createNode("colors", "DataVector3f")->nodeAs<ospray::sg::DataVector3f>();
+       //auto alpha  = ospray::sg::createNode("alpha", "DataVector2f")->nodeAs<ospray::sg::DataVector2f>();
+       //colors->v.resize(sampleNum);
+       //alpha->v.resize(sampleNum);
+       tfn_c.resize(256);
+       tfn_a.resize(256);
+       //std::copy(c.data(), c.data() + c.size(), reinterpret_cast<float*>(colors->v.data()));
+       //std::copy(a.data(), a.data() + a.size(), reinterpret_cast<float*>(alpha->v.data()));
+       std::copy(c.data(), c.data() + c.size(), reinterpret_cast<float*>(tfn_c.data()));
+       std::copy(a.data(), a.data() + a.size(), reinterpret_cast<float*>(tfn_a.data()));
+       //transferFcn->add(colors);
+       //transferFcn->add(alpha);
+       //colors->markAsModified();
        // Question: How can i add valueRange to sg::transferFunction ??
+       tfn_modified = true;
      });
 #endif
   ImGui_ImplGlfwGL3_Init(window, false);
@@ -204,8 +216,9 @@ int main(int argc, const char **argv)
       decompressor.decompress(jpgBuf.data(), jpgBuf.size(), app.fbSize.x,
           app.fbSize.y, imgBuf);
     }
+#ifndef USE_TFN_MODULE
     const auto tfcnTimeStamp = transferFcn->childrenLastModified();
-
+#endif
     //--------------------------------    
     glClear(GL_COLOR_BUFFER_BIT);
     glDrawPixels(app.fbSize.x, app.fbSize.y, GL_RGBA, GL_UNSIGNED_BYTE, imgBuf.data());
@@ -292,14 +305,22 @@ int main(int argc, const char **argv)
 #ifndef USE_TFN_MODULE
     tfnWidget->render();
 #else    
-    tfnWidget->render(transferFcn->child("numSamples").valueAs<int>());
+    //tfnWidget->render(transferFcn->child("numSamples").valueAs<int>());
+    tfnWidget->render(256);
 #endif
 
+#ifndef USE_TFN_MODULE
     if (transferFcn->childrenLastModified() != tfcnTimeStamp) {
       appdata.tfcn_colors =
         transferFcn->child("colors").nodeAs<ospray::sg::DataVector3f>()->v;
       const auto &ospAlpha =
         transferFcn->child("alpha").nodeAs<ospray::sg::DataVector2f>()->v;
+#else
+    if (tfn_modified) {
+      tfn_modified = false;
+      appdata.tfcn_colors = tfn_c;
+      const auto &ospAlpha = tfn_a;
+#endif
       appdata.tfcn_alphas.clear();
       std::transform(ospAlpha.begin(), ospAlpha.end(),
           std::back_inserter(appdata.tfcn_alphas),
