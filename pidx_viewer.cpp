@@ -9,13 +9,13 @@
 #include <GLFW/glfw3.h>
 
 #include "ospcommon/utility/SaveImage.h"
-#ifndef USE_TFN_MODULE
-# include "ospray/ospray_cpp/TransferFunction.h"
-# include "common/sg/transferFunction/TransferFunction.h"
-#endif
 #include "common/imgui/imgui.h"
 #include "widgets/imgui_impl_glfw_gl3.h"
+
 #ifndef USE_TFN_MODULE
+# include "ospray/ospray.h"
+# include "ospray/ospray_cpp/TransferFunction.h"
+# include "common/sg/transferFunction/TransferFunction.h"
 # include "widgets/transferFunction.h"
 #else
 # include "widgets/TransferFunctionWidget.h"
@@ -135,6 +135,9 @@ void charCallback(GLFWwindow *window, unsigned int c) {
 
 int main(int argc, const char **argv)
 {
+#ifndef USE_TFN_MODULE
+  ospInit(&argc, argv);
+#endif
   //------------------------------------------------------------
   std::string serverhost;
   int port = -1;
@@ -299,10 +302,12 @@ int main(int argc, const char **argv)
 
 #ifndef USE_TFN_MODULE
     if (transferFcn->childrenLastModified() != tfcnTimeStamp) {
+      std::cout << "guess... " << std::endl;
       appdata.tfcn_colors =
         transferFcn->child("colors").nodeAs<ospray::sg::DataVector3f>()->v;
       const auto &ospAlpha =
         transferFcn->child("alpha").nodeAs<ospray::sg::DataVector2f>()->v;
+      std::cout << "here? " << std::endl;
 #else
     if (tfn_modified) {
       tfn_modified = false;
