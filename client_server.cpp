@@ -59,7 +59,7 @@ void ServerConnection::update_app_state(const AppState &state, const AppData &da
   app_data.tfcn_alphas = data.tfcn_alphas;
 }
 void ServerConnection::connection_thread() {
-  SocketFabric fabric(server_host, server_port);
+  ospcommon::networking::SocketFabric fabric(server_host, server_port);
   ospcommon::networking::BufferedReadStream read_stream(fabric);
   ospcommon::networking::BufferedWriteStream write_stream(fabric);
 

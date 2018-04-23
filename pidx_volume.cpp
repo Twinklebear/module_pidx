@@ -7,13 +7,15 @@ using namespace ospray::cpp;
 using namespace ospcommon;
 
 IDXVar parse_idx_type(const std::string &type) {
+  IDXVar var;
   const auto pos = type.find('*');
   if (pos == std::string::npos) {
-    throw std::runtime_error("Invalid IDX type string: " + type);
+    var.components = 1;
+    var.type = type;
+  } else {
+    var.components = std::stol(type);
+    var.type = type.substr(pos + 1);
   }
-  IDXVar var;
-  var.components = std::stol(type);
-  var.type = type.substr(pos + 1);
   // Convert the type string to one we can give ospray
   if (var.type == "uint8" || var.type == "int8") {
     var.type = "uchar";

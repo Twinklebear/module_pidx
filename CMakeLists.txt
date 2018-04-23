@@ -21,8 +21,7 @@ if (OSPRAY_MODULE_PIDX)
   add_library(pidx_app_util
     util.cpp
     image_util.cpp
-    client_server.cpp
-    socket_fabric.cpp)
+    client_server.cpp)
   target_link_libraries(pidx_app_util PUBLIC
     ospray
     ospray_common
