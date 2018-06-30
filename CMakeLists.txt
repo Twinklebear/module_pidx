@@ -71,8 +71,8 @@ if (OSPRAY_MODULE_PIDX)
       add_definitions(-DUSE_TFN_MODULE)
       mark_as_advanced(TFN_MODULE_SRC)
     endif(TFN_MODULE_ROOT)
-
-    find_package(GLFW REQUIRED)
+    
+    find_package(glfw3 REQUIRED)
     include_directories(${GLFW_INCLUDE_DIRS})
     mark_as_advanced(GLFW_ROOT)
 
