@@ -55,6 +55,7 @@ private:
 // A client connecting to the render worker server
 class ClientConnection {
   JPGCompressor compressor;
+  ospcommon::networking::SocketListener listener;
   ospcommon::networking::SocketFabric fabric;
   ospcommon::networking::BufferedReadStream read_stream;
   ospcommon::networking::BufferedWriteStream write_stream;
