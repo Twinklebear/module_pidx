@@ -71,8 +71,10 @@ if (OSPRAY_MODULE_PIDX)
       add_definitions(-DUSE_TFN_MODULE)
       mark_as_advanced(TFN_MODULE_SRC)
     endif(TFN_MODULE_ROOT)
-    
-    find_package(glfw3 REQUIRED)
+
+    if (NOT TARGET glfw)
+      find_package(glfw3 REQUIRED)
+    endif ()
     include_directories(${GLFW_INCLUDE_DIRS})
     mark_as_advanced(GLFW_ROOT)
 
@@ -88,7 +90,7 @@ if (OSPRAY_MODULE_PIDX)
       ospray_imgui
       ospray_imgui3d_sg
       ${OPENGL_LIBRARIES}
-      ${GLFW_LIBRARY}
+      glfw
       TurboJpeg)
 
   endif()  
