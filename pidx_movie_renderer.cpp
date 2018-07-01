@@ -213,7 +213,7 @@ int main(int argc, char **argv) {
   model.release();
   renderer.release();
   camera.release();
-
+  ospShutdown();
   MPI_Finalize();
   return 0;
 }
